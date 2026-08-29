@@ -267,27 +267,6 @@ async def _resolve_day(day: dict) -> dict:
     return out
 
 
-def _price_breakdown(c: dict) -> list:
-    rows = []
-    extras = sum(c.get(k) or 0 for k in ("extra_bed_cost", "cwb_cost", "cnb_cost"))
-    room_only = round((c.get("hotel_cost") or 0) - extras, 2)
-    if room_only:
-        rows.append({"label": "Accommodation (double occupancy, selected meal plans)", "amount": room_only})
-    for key, label in (("extra_bed_cost", "Extra bed — adult"), ("cwb_cost", "Child with bed (CWB)"), ("cnb_cost", "Child without bed (CNB)")):
-        if c.get(key):
-            rows.append({"label": label, "amount": c[key]})
-    if c.get("transport_cost"):
-        rows.append({"label": "Private transport & driver", "amount": c["transport_cost"]})
-    if c.get("activity_cost"):
-        rows.append({"label": "Activities & experiences", "amount": c["activity_cost"]})
-    service = round(c.get("margin_amount", 0) - c.get("discount", 0), 2)
-    if service:
-        rows.append({"label": "Tour services & handling" if service > 0 else "Special discount", "amount": service})
-    if c.get("tax_amount"):
-        rows.append({"label": "GST", "amount": c["tax_amount"]})
-    return rows
-
-
 def _compute_stays(itin: dict, resolved_days: list) -> list:
     try:
         start = date.fromisoformat(itin.get("start_date", ""))
@@ -337,7 +316,6 @@ async def public_share(token: str):
         "days": days,
         "total": c.get("total", 0),
         "per_person": c.get("per_person", 0),
-        "price_breakdown": _price_breakdown(c),
         "stays": _compute_stays(itin, days),
         "terms": {k: sanitize_html(v) for k, v in (itin.get("terms") or {}).items()},
         "accepted": itin.get("accepted", False),

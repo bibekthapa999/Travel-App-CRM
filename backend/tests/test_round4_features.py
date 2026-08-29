@@ -119,7 +119,7 @@ class TestOccupancyExtras:
         assert c["cnb_cost"] == 400
         assert c["hotel_cost"] == 6700
 
-    def test_breakdown_sums_to_total(self, admin):
+    def test_share_payload_has_no_internal_breakdown(self, admin):
         h, _ = _deluxe_hotel(admin)
         body = {
             "title": "TEST_ Round4 Breakdown", "customer_name": "TEST_ Guest",
@@ -141,10 +141,10 @@ class TestOccupancyExtras:
             share = requests.get(f"{API}/share/{token}", timeout=30)
             assert share.status_code == 200, share.text
             s = share.json()
-            rows = s["price_breakdown"]
-            assert rows, "price_breakdown empty"
-            rows_sum = round(sum(x["amount"] for x in rows), 2)
-            assert rows_sum == s["total"], f"breakdown rows sum {rows_sum} != total {s['total']} rows={rows}"
+            assert s["total"] > 0 and s["per_person"] > 0
+            assert "price_breakdown" not in s, "guest view must show only total + per person (owner request)"
+            for leaked in ("margin_amount", "base_cost", "hotel_cost", "costing"):
+                assert leaked not in s, f"internal costing field leaked to guest: {leaked}"
         finally:
             admin.delete(f"{API}/itineraries/{iid}", timeout=30)
 

@@ -107,4 +107,6 @@
 @media print {
     .no-print { display: none !important; }
     body { background: #fff !important; }
+    [data-testid="policies-accordion"] [role="region"][hidden] { display: block !important; }
+    [data-testid="policies-accordion"] [data-state="closed"] > [role="region"] { display: block !important; height: auto !important; }
 }

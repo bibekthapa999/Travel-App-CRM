@@ -7,6 +7,10 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // null = checking, false = logged out
 
   useEffect(() => {
+    if (window.location.pathname.startsWith("/share") || window.location.pathname.startsWith("/login")) {
+      setUser(false);
+      return;
+    }
     api
       .get("/auth/me")
       .then((r) => setUser(r.data))

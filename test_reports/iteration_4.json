@@ -1,0 +1,41 @@
+{
+  "summary": "Bug-fix verification round (owner bugs 1 & 2) + regression. Backend: full pytest suite 115 passed (2nd run 112 passed / 3 skipped only due to managed Resend 429 rate limit). GET /api/share/IxwAnPBYwGI (unauthenticated) returns total=21131.25 and per_person=5282.81 with NO price_breakdown / costing / margin_amount / base_cost / hotel_cost keys — BUG 1 backend verified fixed. Frontend guest view: share-price-box shows only 'TOTAL PACKAGE COST' + per-person line; price-breakdown and breakdown-total are absent from the DOM; no Accommodation/Private transport/Tour services/GST/margin price rows anywhere (the only 'accommodation' string is the inclusions bullet 'Accommodation in the listed hotels' which is correct). BUG 2: policies accordions are collapsed on web and all 3 (Payment/Cancellation/Important Notes) open after a 'beforeprint' event and after clicking download-pdf-btn ('30% advance' becomes visible) — BUT the expansion is NOT synchronous with beforeprint (see rca_of_the_issue), which is a real risk for the actual printed PDF. Included/Excluded cards are always visible (not collapsible). Regression: mobile 390px has zero horizontal overflow (scrollWidth==clientWidth==390), sticky-action-bar shows all 4 actions, accept-quote-btn flow works and accepted-banner persists after reload. CRM admin builder (/itineraries/new) still shows the full internal breakdown (Hotels/Transport/Activities/Base cost/Margin/GST/Total/Per person) — unchanged. Company WhatsApp still 919876543210; demo proposal accepted flag reset back to false after the accept test.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/itineraries/{id}/accept", "issue": "No idempotency/guard: repeat accepts overwrite accepted_at silently (low impact)."},
+      {"endpoint": "backend_test.py email tests", "issue": "3 tests self-skip on Resend 429 when the suite is run twice back-to-back (provider limit, not an app defect)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SharedItinerary policies accordion (print path)", "issue": "beforeprint handler only schedules a React state update; window.print() then renders synchronously, so the actual Chrome PDF can still capture the accordions collapsed (Radix unmounts closed AccordionContent, so print CSS alone cannot rescue it). Verified: dispatching beforeprint and reading the DOM in the SAME synchronous task yields 0 open items; only after a macrotask do 12 open nodes appear. Also native Ctrl+P will hit the same race.", "selector": "[data-testid=\"download-pdf-btn\"], [data-testid=\"policies-accordion\"]", "priority": "HIGH"},
+      {"component": "ItineraryBuilder start date", "issue": "Uses native browser date input (mm/dd/yyyy) instead of the shadcn Calendar/Popover used elsewhere.", "selector": "input[type=date] on /itineraries/new", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Public share page bootstrap", "issue": "AuthContext calls /api/auth/me (+/auth/refresh) on the unauthenticated /share/:token route, producing 3x 401 console errors for guests. Cosmetic but noisy; skip the bootstrap on public routes.", "affected_selectors": ["[data-testid=\"shared-itinerary\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Guest share hero (demo proposal)", "issues": ["Title says 'Sikkim Escape — 3D/2N' but meta line renders '2 days · 1 nights' (demo data has only 2 days) — data inconsistency in the demo proposal, not a code bug", "'1 nights' should be pluralised ('1 night')"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_round4_features.py", "/app/backend/tests/backend_test.py", "/app/backend/tests/test_round3_features.py", "/app/backend/tests/test_round2_fixes.py", "/app/backend/tests/reset_demo_accept.py"],
+  "action_items": [
+    "HIGH: Make PDF/print expansion deterministic — in download-pdf-btn handler set openPolicies to all keys first, then call window.print() in a setTimeout/requestAnimationFrame (or flushSync). Additionally use <AccordionContent forceMount> + @media print { [data-testid=policies-accordion] [role=region]{display:block!important;height:auto!important;} [hidden]{display:block!important;} } so browser-native Ctrl+P also prints expanded policies.",
+    "LOW: Skip /auth/me bootstrap on /share/:token to remove guest 401 console errors.",
+    "LOW: Fix '1 nights' pluralisation and the 3D/2N vs 2-day mismatch in the demo proposal data.",
+    "LOW: Replace native date input in ItineraryBuilder with shadcn Calendar."
+  ],
+  "critical_code_review_comments": [
+    "SharedItinerary.jsx: relying solely on window 'beforeprint' + React setState is a documented race — print rendering is synchronous, state flush is not. Verified reproducible in Chromium.",
+    "itineraries.py public_share correctly whitelists guest fields (no _id, no costing) — good; keep the test_round4 assertion as the regression guard."
+  ],
+  "updated_files": ["/app/backend/tests/reset_demo_accept.py (new helper: resets demo share accepted flag)"],
+  "success_rate": {"backend": "100%", "frontend": "90%"},
+  "seed_data_creation": "No new seed data retained. Test itineraries created by pytest were deleted; cleanup_test_data.py ran clean (bookings 0, invoices 0). Demo proposal IxwAnPBYwGI preserved and its accepted flag restored to false.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Admin thapa.holidays09@gmail.com / Admin@123 (worked; login redirects to /)",
+  "context_for_next_testing_agent": "Both owner bugs are functionally addressed (breakdown removed from API+UI; accordions expand on beforeprint). The only open HIGH item is the synchronous-print race for policies expansion — verify by dispatching beforeprint and reading [data-testid=policies-accordion] [data-state=open] count inside the SAME page.evaluate() call; it must be 3+ synchronously. Use /app/backend/tests/reset_demo_accept.py after testing accept-quote-btn on the demo link. Rerunning the suite twice in a row skips 3 email tests (Resend 429).",
+  "rca_of_the_issue": "window.print() dispatches 'beforeprint' synchronously and then blocks to lay out/print. The handler calls setOpenPolicies(...), a React state update that is flushed in a later task, so at print time the Radix AccordionContent for the 3 policies is still unmounted/closed. Playwright confirmation: page.evaluate dispatching beforeprint and counting open nodes in the same task returned 0; after a 600ms wait the count was 12 and '30% advance' was visible. Mitigation: expand state before invoking print (setTimeout/flushSync) and/or forceMount content plus print-media CSS overrides."
+}

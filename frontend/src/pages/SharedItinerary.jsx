@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -60,6 +61,19 @@ export default function SharedItinerary() {
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [openPolicies, setOpenPolicies] = useState([]);
+
+  const expandPoliciesSync = () => flushSync(() => setOpenPolicies(POLICY_ACCORDIONS.map(([k]) => k)));
+
+  useEffect(() => {
+    window.addEventListener("beforeprint", expandPoliciesSync);
+    return () => window.removeEventListener("beforeprint", expandPoliciesSync);
+  }, []);
+
+  const downloadPdf = () => {
+    expandPoliciesSync();
+    setTimeout(() => window.print(), 50);
+  };
 
   useEffect(() => {
     api
@@ -136,7 +150,7 @@ export default function SharedItinerary() {
           </h1>
           <div className="flex flex-wrap gap-x-6 gap-y-2 mt-5 text-sm text-white/90">
             <span className="flex items-center gap-1.5"><CalendarDays className="w-4 h-4" />{fmtDate(data.start_date)}</span>
-            <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{data.days.length} days{nights ? ` · ${nights} nights` : ""}</span>
+            <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{data.days.length} days{nights ? ` · ${nights} night${nights > 1 ? "s" : ""}` : ""}</span>
             <span className="flex items-center gap-1.5"><Users className="w-4 h-4" />{groupSize}</span>
           </div>
         </div>
@@ -183,20 +197,6 @@ export default function SharedItinerary() {
             </div>
             <p className="text-sm text-slate-500">{inr(data.per_person)} per person · all taxes included</p>
           </div>
-          {data.price_breakdown?.length > 0 && (
-            <div className="mt-5 border-t border-slate-200" data-testid="price-breakdown">
-              {data.price_breakdown.map((row, i) => (
-                <div key={i} className="flex justify-between py-2.5 border-b border-slate-100 text-sm">
-                  <span className="text-slate-600">{row.label}</span>
-                  <span className="font-medium tabular-nums">{inr(row.amount)}</span>
-                </div>
-              ))}
-              <div className="flex justify-between py-3 font-heading font-bold text-base">
-                <span>Package total</span>
-                <span data-testid="breakdown-total">{inr(data.total)}</span>
-              </div>
-            </div>
-          )}
           <p className="text-xs text-slate-400 mt-4">Valid for 7 days. Prices may vary with hotel availability and seasonal surcharges.</p>
           {accepted && (
             <div className="mt-5 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700 font-medium" data-testid="accepted-banner">
@@ -332,11 +332,11 @@ export default function SharedItinerary() {
           <section className="mt-14" data-testid="policies-section">
             <Overline>Good to know</Overline>
             <h2 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-6">Policies & Terms</h2>
-            <Accordion type="multiple" className="border-t border-slate-200" data-testid="policies-accordion">
+            <Accordion type="multiple" value={openPolicies} onValueChange={setOpenPolicies} className="border-t border-slate-200" data-testid="policies-accordion">
               {POLICY_ACCORDIONS.filter(([key]) => data.terms?.[key]).map(([key, label]) => (
                 <AccordionItem key={key} value={key} className="border-b border-slate-200">
                   <AccordionTrigger className="font-heading text-base font-semibold hover:text-primary" data-testid={`policy-trigger-${key}`}>{label}</AccordionTrigger>
-                  <AccordionContent>
+                  <AccordionContent forceMount>
                     <div className="rich-text text-sm text-slate-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: data.terms[key] }} />
                   </AccordionContent>
                 </AccordionItem>
@@ -381,7 +381,7 @@ export default function SharedItinerary() {
               <Share2 className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Share</span>
             </a>
           </Button>
-          <Button variant="outline" onClick={() => window.print()} data-testid="download-pdf-btn">
+          <Button variant="outline" onClick={downloadPdf} data-testid="download-pdf-btn">
             <Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Download PDF</span>
           </Button>
           {waLink && (

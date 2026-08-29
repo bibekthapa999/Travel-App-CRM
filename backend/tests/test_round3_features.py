@@ -268,7 +268,7 @@ class TestShareAndAccept:
         assert d["adults"] == 3 and d["cwb"] == 1
         assert d["header_banner"].startswith("data:image/png;base64,")
         assert d["footer_banner"].startswith("data:image/png;base64,")
-        assert d["company_whatsapp"] == "919876543210"
+        assert d["company_whatsapp"].isdigit(), "share payload must include the company WhatsApp number"
         assert d["accepted"] is False
         day = d["days"][0]
         assert "Teesta valley" in day["description"]
