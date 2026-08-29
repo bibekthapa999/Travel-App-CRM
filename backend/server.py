@@ -71,8 +71,14 @@ async def seed_inventory():
                 "id": str(uuid.uuid4()), "name": "Hotel Himalayan View", "destination": "Manali", "star": 4,
                 "contact_name": "Ramesh Kumar", "phone": "919816012345", "email": "delivered+hotel-himalayan@resend.dev",
                 "rooms": [
-                    {"category": "Deluxe", "cp": 3500, "map": 4200, "ap": 4800, "single_rate": 2800, "extra_bed_adult": 1200, "cwb": 900, "cnb": 400},
-                    {"category": "Premium Valley View", "cp": 5200, "map": 6000, "ap": 6800, "single_rate": 4200, "extra_bed_adult": 1500, "cwb": 1100, "cnb": 500},
+                    {"category": "Deluxe",
+                     "cp_single": 2800, "cp_double": 3500, "cp_extra_bed": 1200, "cp_cwb": 900, "cp_cnb": 400,
+                     "map_single": 3400, "map_double": 4200, "map_extra_bed": 1500, "map_cwb": 1100, "map_cnb": 500,
+                     "ap_single": 3900, "ap_double": 4800, "ap_extra_bed": 1800, "ap_cwb": 1300, "ap_cnb": 600},
+                    {"category": "Premium Valley View",
+                     "cp_single": 4200, "cp_double": 5200, "cp_extra_bed": 1500, "cp_cwb": 1100, "cp_cnb": 500,
+                     "map_single": 5000, "map_double": 6000, "map_extra_bed": 1800, "map_cwb": 1300, "map_cnb": 600,
+                     "ap_single": 5600, "ap_double": 6800, "ap_extra_bed": 2100, "ap_cwb": 1500, "ap_cnb": 700},
                 ],
                 "image_url": "https://images.unsplash.com/photo-1779547011126-c646b7de93b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
                 "seasons": [{"label": "Peak Winter", "start": "2025-12-20", "end": "2026-01-10", "surcharge_pct": 25}],
@@ -82,8 +88,14 @@ async def seed_inventory():
                 "id": str(uuid.uuid4()), "name": "Goa Palms Beach Resort", "destination": "Goa", "star": 4,
                 "contact_name": "Maria D'Souza", "phone": "919822045678", "email": "delivered+hotel-goapalms@resend.dev",
                 "rooms": [
-                    {"category": "Deluxe Garden View", "cp": 4200, "map": 5000, "ap": 5800, "single_rate": 3400, "extra_bed_adult": 1400, "cwb": 1000, "cnb": 500},
-                    {"category": "Sea View Suite", "cp": 7500, "map": 8500, "ap": 9500, "single_rate": 6000, "extra_bed_adult": 1800, "cwb": 1300, "cnb": 600},
+                    {"category": "Deluxe Garden View",
+                     "cp_single": 3400, "cp_double": 4200, "cp_extra_bed": 1400, "cp_cwb": 1000, "cp_cnb": 500,
+                     "map_single": 4200, "map_double": 5000, "map_extra_bed": 1700, "map_cwb": 1200, "map_cnb": 600,
+                     "ap_single": 5000, "ap_double": 5800, "ap_extra_bed": 2000, "ap_cwb": 1400, "ap_cnb": 700},
+                    {"category": "Sea View Suite",
+                     "cp_single": 6000, "cp_double": 7500, "cp_extra_bed": 1800, "cp_cwb": 1300, "cp_cnb": 600,
+                     "map_single": 7000, "map_double": 8500, "map_extra_bed": 2100, "map_cwb": 1500, "map_cnb": 700,
+                     "ap_single": 8000, "ap_double": 9500, "ap_extra_bed": 2400, "ap_cwb": 1700, "ap_cnb": 800},
                 ],
                 "image_url": "https://images.unsplash.com/photo-1718359759373-1b2670b7478b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
                 "seasons": [{"label": "New Year Rush", "start": "2025-12-24", "end": "2026-01-05", "surcharge_pct": 40}],
@@ -92,7 +104,10 @@ async def seed_inventory():
             {
                 "id": str(uuid.uuid4()), "name": "Jaipur Heritage Haveli", "destination": "Jaipur", "star": 3,
                 "contact_name": "Vikram Singh", "phone": "919829078901", "email": "delivered+hotel-jaipur@resend.dev",
-                "rooms": [{"category": "Royal Deluxe", "cp": 2800, "map": 3400, "ap": 3900, "single_rate": 2200, "extra_bed_adult": 900, "cwb": 700, "cnb": 300}],
+                "rooms": [{"category": "Royal Deluxe",
+                           "cp_single": 2200, "cp_double": 2800, "cp_extra_bed": 900, "cp_cwb": 700, "cp_cnb": 300,
+                           "map_single": 2800, "map_double": 3400, "map_extra_bed": 1100, "map_cwb": 850, "map_cnb": 350,
+                           "ap_single": 3200, "ap_double": 3900, "ap_extra_bed": 1300, "ap_cwb": 1000, "ap_cnb": 400}],
                 "image_url": "https://images.unsplash.com/photo-1595161695996-f746349f4945?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
                 "seasons": [],
                 "active": True, "created_at": datetime.now(timezone.utc).isoformat(),
@@ -175,15 +190,33 @@ async def fix_hotel_matrix():
     matrix = {
         "Hotel Himalayan View": {
             "image_url": "https://images.unsplash.com/photo-1779547011126-c646b7de93b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
-            "rooms": {"Deluxe": {"single_rate": 2800, "extra_bed_adult": 1200, "cwb": 900, "cnb": 400}, "Premium Valley View": {"single_rate": 4200, "extra_bed_adult": 1500, "cwb": 1100, "cnb": 500}},
+            "rooms": {
+                "Deluxe": {"cp_single": 2800, "cp_double": 3500, "cp_extra_bed": 1200, "cp_cwb": 900, "cp_cnb": 400,
+                           "map_single": 3400, "map_double": 4200, "map_extra_bed": 1500, "map_cwb": 1100, "map_cnb": 500,
+                           "ap_single": 3900, "ap_double": 4800, "ap_extra_bed": 1800, "ap_cwb": 1300, "ap_cnb": 600},
+                "Premium Valley View": {"cp_single": 4200, "cp_double": 5200, "cp_extra_bed": 1500, "cp_cwb": 1100, "cp_cnb": 500,
+                                        "map_single": 5000, "map_double": 6000, "map_extra_bed": 1800, "map_cwb": 1300, "map_cnb": 600,
+                                        "ap_single": 5600, "ap_double": 6800, "ap_extra_bed": 2100, "ap_cwb": 1500, "ap_cnb": 700},
+            },
         },
         "Goa Palms Beach Resort": {
             "image_url": "https://images.unsplash.com/photo-1718359759373-1b2670b7478b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
-            "rooms": {"Deluxe Garden View": {"single_rate": 3400, "extra_bed_adult": 1400, "cwb": 1000, "cnb": 500}, "Sea View Suite": {"single_rate": 6000, "extra_bed_adult": 1800, "cwb": 1300, "cnb": 600}},
+            "rooms": {
+                "Deluxe Garden View": {"cp_single": 3400, "cp_double": 4200, "cp_extra_bed": 1400, "cp_cwb": 1000, "cp_cnb": 500,
+                                       "map_single": 4200, "map_double": 5000, "map_extra_bed": 1700, "map_cwb": 1200, "map_cnb": 600,
+                                       "ap_single": 5000, "ap_double": 5800, "ap_extra_bed": 2000, "ap_cwb": 1400, "ap_cnb": 700},
+                "Sea View Suite": {"cp_single": 6000, "cp_double": 7500, "cp_extra_bed": 1800, "cp_cwb": 1300, "cp_cnb": 600,
+                                   "map_single": 7000, "map_double": 8500, "map_extra_bed": 2100, "map_cwb": 1500, "map_cnb": 700,
+                                   "ap_single": 8000, "ap_double": 9500, "ap_extra_bed": 2400, "ap_cwb": 1700, "ap_cnb": 800},
+            },
         },
         "Jaipur Heritage Haveli": {
             "image_url": "https://images.unsplash.com/photo-1595161695996-f746349f4945?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
-            "rooms": {"Royal Deluxe": {"single_rate": 2200, "extra_bed_adult": 900, "cwb": 700, "cnb": 300}},
+            "rooms": {
+                "Royal Deluxe": {"cp_single": 2200, "cp_double": 2800, "cp_extra_bed": 900, "cp_cwb": 700, "cp_cnb": 300,
+                                 "map_single": 2800, "map_double": 3400, "map_extra_bed": 1100, "map_cwb": 850, "map_cnb": 350,
+                                 "ap_single": 3200, "ap_double": 3900, "ap_extra_bed": 1300, "ap_cwb": 1000, "ap_cnb": 400},
+            },
         },
     }
     for name, fx in matrix.items():
@@ -192,8 +225,9 @@ async def fix_hotel_matrix():
             continue
         rooms = hotel.get("rooms", [])
         for r in rooms:
-            for k, v in fx["rooms"].get(r.get("category"), {}).items():
-                r.setdefault(k, v)
+            m = fx["rooms"].get(r.get("category"))
+            if m:
+                r.update(m)
         await db.hotels.update_one({"id": hotel["id"]}, {"$set": {"rooms": rooms, "image_url": fx["image_url"]}})
 
 

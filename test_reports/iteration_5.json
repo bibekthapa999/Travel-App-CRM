@@ -1,0 +1,35 @@
+{
+  "summary": "Round-5 owner-bug verification (backend + frontend). New pytest file tests/test_round5_matrix.py (11 tests, all pass) covers per-meal-plan 15-field hotel rate matrix costing (cp 5600 / map 6800 / ap 7900 for 3 adults+1 CWB; map_single 3400 for 1 adult), full-matrix hotel create+persist+cost, legacy flat-schema fallback, multi-vehicle day costing (7400 = 3000+4400, legacy vehicle_id 4400), booking vendor_confirmations containing BOTH vehicle vendors, share vehicle_label joined with ' + ', and demo share token /share/IxwAnPBYwGI still alive. Frontend Playwright: hotel matrix editor (3 plan rows x 5 occupancy inputs with correct seeded Goa values, new hotel saved and matrix persisted on reopen), New Inquiry dialog scroll bug FIXED (scrollable at 1920x800 and 1366x700, save button + privacy disclaimer reachable, dialog never clipped), multi-vehicle builder (add/remove second vehicle, transport 7400 -> 3000 -> 7400, itinerary saved with both vehicles and listed), guest view unchanged (only Total, no cost breakdown, WhatsApp 919876543210). Auth playbook re-verified: bcrypt hash $2b$12$, httpOnly+Secure cookies, explicit CORS origins with credentials, brute-force 429 lockout, idempotent seed_admin that rotates password on change. FULL SUITE IS NOT GREEN: 6 pre-existing round-3/round-4 tests still assert old flat-schema rates and now fail (120 passed / 6 failed).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "tests/test_round3_features.py + tests/test_round4_features.py", "issue": "6 stale assertions from the flat-rate era fail against the new per-plan matrix (not a product bug, expectations are outdated): three_adults_one_cwb expects 6300 -> now 6800; single_occupancy expects 2800 -> now 3400 (map_single); cnb_and_meal_plans expects 10900 -> now 11500; costing_saved_on_itinerary expects 6300 -> 6800; public_share_payload expects total 8268.75 -> now 8925.0 (demo proposal re-costed after matrix migration); round4 test_preview_cost_extras expects extra_bed_cost 1200 -> now 1500 (map_extra_bed). Update these expectations so the regression suite is green again."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Lead dialog (/leads) and Hotel dialog seasons (/vendors)", "issues": ["Travel start/end and season start/end use the browser-native date input (mm/dd/yyyy with native picker) instead of the shadcn Calendar/Popover used elsewhere — inconsistent and shows US date format to an Indian audience"]},
+      {"screen": "Guest proposal hero (/share/{token})", "issues": ["Brand name + tagline in the top-left overlay ('Thapa Holidays / With Thapa Holidays, your Adventure awaits') has very low contrast against the light foggy hero photo; add a scrim or text-shadow"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_round5_matrix.py", "/app/test_reports/pytest/round5_results.xml"],
+  "action_items": [
+    "Update the 6 outdated rate expectations in tests/test_round3_features.py and tests/test_round4_features.py to the new per-meal-plan values (6800 / 3400 / 11500 / 8925.0 / extra_bed 1500) so `pytest tests/ -q` is green.",
+    "Optional design polish: replace native date inputs in Leads/Hotel-season dialogs with the shadcn calendar; add scrim behind guest-view hero brand text."
+  ],
+  "critical_code_review_comments": [
+    "ItineraryBuilder vehicle select onChange applies `arr.filter(Boolean)`: if a user adds a second (still empty) vehicle row and then changes the FIRST select, the empty second row is dropped and the day-vehicle-{i}-1 select disappears unexpectedly. Preserve empty slots until explicitly removed.",
+    "compute_costing charges each additional vehicle its full per_day_rate + driver_charge for every day it appears — correct for the 6-pax/2-cab case, but there is no de-dup guard if the same vehicle_id is added twice to one day (double charge, no validation).",
+    "Multi-vehicle costing and _resolve_day duplicate the `vehicle_ids or [vehicle_id]` legacy-fallback expression in 3 files (itineraries.py x2, bookings.py x2) — extract a shared helper."
+  ],
+  "updated_files": ["/app/backend/tests/test_round5_matrix.py", "/app/frontend/src/pages/ItineraryBuilder.jsx (added data-testid cost-hotels / cost-transport / cost-activities to the calculator breakdown)"],
+  "success_rate": {"backend": "95% (120/126 suite; 11/11 new round-5 tests)", "frontend": "100% of round-5 flows tested"},
+  "seed_data_creation": "Created and then deleted: TEST_Matrix Hotel, TEST_Legacy Hotel, TEST_UI Matrix Resort, TEST_Multi Vehicle Trip itinerary + its booking (cascade-deleted with the itinerary), TEST_UI Multi Vehicle 6pax itinerary. Ran cleanup_test_data.py (5 itineraries, 1 hotel purged) and reset_demo_accept.py (demo accepted=False restored). Demo proposal /share/IxwAnPBYwGI preserved.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin thapa.holidays09@gmail.com / Admin@123 (from /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Round-5 features (hotel 15-field meal-plan matrix, lead dialog scroll, multi-vehicle per day) are all verified working end to end. Only outstanding item is 6 stale assertions in round3/round4 test files. New reusable tests live in /app/backend/tests/test_round5_matrix.py; testids used: hotel-room-{cp|map|ap}-{single|double|extra_bed|cwb|cnb}-{i}, day-add-vehicle-1, day-vehicle-1-1, day-vehicle-remove-1-1, cost-transport, cost-hotels. Note re-running the email tests back to back can hit Resend 429 (skipped, not a defect).",
+  "rca_of_the_issue": "The 6 failing legacy tests are a direct consequence of the intended spec change: costing now resolves {plan}_double/{plan}_single/{plan}_extra_bed/{plan}_cwb/{plan}_cnb first and only falls back to the flat cp/map/ap + single_rate/extra_bed_adult fields. Seeded hotels were migrated to the new matrix at startup, so MAP/AP extras are now higher than the single flat extra-bed rate the old tests asserted; the demo proposal total moved from 8268.75 to 8925.0 for the same reason."
+}

@@ -53,17 +53,22 @@ async def compute_costing(payload: dict) -> dict:
             if hotel:
                 room = next((r for r in hotel.get("rooms", []) if r.get("category") == d.get("room_category")), None)
                 if room:
-                    double_rate = _f(room.get(d.get("meal_plan") or "cp"))
+                    plan = d.get("meal_plan") or "cp"
+                    double_rate = _f(room.get(f"{plan}_double")) or _f(room.get(plan))
+                    single_rate = _f(room.get(f"{plan}_single")) or _f(room.get("single_rate"))
+                    extra_rate = _f(room.get(f"{plan}_extra_bed")) or _f(room.get("extra_bed_adult"))
+                    cwb_rate = _f(room.get(f"{plan}_cwb")) or _f(room.get("cwb"))
+                    cnb_rate = _f(room.get(f"{plan}_cnb")) or _f(room.get("cnb"))
                     pairs, rem = divmod(max(adults, 1), 2)
                     if adults <= 1:
-                        occ = _f(room.get("single_rate")) or double_rate
+                        occ = single_rate or double_rate
                         extra = cb = cn = 0.0
                     else:
                         occ = pairs * double_rate
-                        extra = _f(room.get("extra_bed_adult")) if rem else 0.0
+                        extra = extra_rate if rem else 0.0
                         occ += extra
-                        cb = cwb_n * _f(room.get("cwb"))
-                        cn = cnb_n * _f(room.get("cnb"))
+                        cb = cwb_n * cwb_rate
+                        cn = cnb_n * cnb_rate
                         occ += cb + cn
                     mult = 1.0
                     for s in hotel.get("seasons", []):
@@ -76,8 +81,8 @@ async def compute_costing(payload: dict) -> dict:
                     extra_bed_total += extra * mult
                     cwb_total += cb * mult
                     cnb_total += cn * mult
-        vid = d.get("vehicle_id") or ""
-        if vid:
+        vids = d.get("vehicle_ids") or ([d["vehicle_id"]] if d.get("vehicle_id") else [])
+        for vid in vids:
             if vid not in vehicle_cache:
                 vehicle_cache[vid] = await db.vehicles.find_one({"id": vid}, {"_id": 0})
             vehicle = vehicle_cache[vid]
@@ -259,10 +264,13 @@ async def _resolve_day(day: dict) -> dict:
             out["hotel_name"] = hotel.get("name", "")
             if hotel.get("image_url"):
                 out["images"].append(hotel["image_url"])
-    if day.get("vehicle_id"):
-        vehicle = await db.vehicles.find_one({"id": day["vehicle_id"]}, {"_id": 0})
+    vids = day.get("vehicle_ids") or ([day["vehicle_id"]] if day.get("vehicle_id") else [])
+    labels = []
+    for vid in vids:
+        vehicle = await db.vehicles.find_one({"id": vid}, {"_id": 0})
         if vehicle:
-            out["vehicle_label"] = f"{vehicle.get('vehicle_type', '')} — {vehicle.get('vendor_name', '')}"
+            labels.append(f"{vehicle.get('vehicle_type', '')} — {vehicle.get('vendor_name', '')}")
+    out["vehicle_label"] = " + ".join(labels)
     out["description"] = sanitize_html(out["description"])
     return out
 

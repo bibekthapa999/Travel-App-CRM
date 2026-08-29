@@ -13,7 +13,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-const EMPTY_HOTEL = { name: "", destination: "", star: 3, contact_name: "", phone: "", email: "", rooms: [{ category: "", cp: "", map: "", ap: "", single_rate: "", extra_bed_adult: "", cwb: "", cnb: "" }], seasons: [] };
+const ROOM_PLANS = ["cp", "map", "ap"];
+const ROOM_OCC = [["single", "Sgl"], ["double", "Dbl"], ["extra_bed", "XBed"], ["cwb", "CWB"], ["cnb", "CNB"]];
+const EMPTY_ROOM = () => ({
+  category: "",
+  cp_single: "", cp_double: "", cp_extra_bed: "", cp_cwb: "", cp_cnb: "",
+  map_single: "", map_double: "", map_extra_bed: "", map_cwb: "", map_cnb: "",
+  ap_single: "", ap_double: "", ap_extra_bed: "", ap_cwb: "", ap_cnb: "",
+});
+
+const EMPTY_HOTEL = { name: "", destination: "", star: 3, contact_name: "", phone: "", email: "", rooms: [EMPTY_ROOM()], seasons: [] };
 const EMPTY_VEHICLE = { vendor_name: "", vehicle_type: "Sedan", route_from: "", route_to: "", per_day_rate: "", driver_charge: "", phone: "", email: "" };
 
 function HotelDialog({ open, onOpenChange, initial, onSaved }) {
@@ -35,12 +44,11 @@ function HotelDialog({ open, onOpenChange, initial, onSaved }) {
       const payload = {
         ...form,
         star: Number(form.star) || 3,
-        rooms: form.rooms.filter((r) => r.category).map((r) => ({
-          category: r.category,
-          cp: Number(r.cp) || 0, map: Number(r.map) || 0, ap: Number(r.ap) || 0,
-          single_rate: Number(r.single_rate) || 0, extra_bed_adult: Number(r.extra_bed_adult) || 0,
-          cwb: Number(r.cwb) || 0, cnb: Number(r.cnb) || 0,
-        })),
+        rooms: form.rooms.filter((r) => r.category).map((r) => {
+          const room = { category: r.category };
+          for (const plan of ROOM_PLANS) for (const [f] of ROOM_OCC) room[`${plan}_${f}`] = Number(r[`${plan}_${f}`]) || 0;
+          return room;
+        }),
         seasons: form.seasons.filter((s) => s.label && s.start && s.end).map((s) => ({ ...s, surcharge_pct: Number(s.surcharge_pct) || 0 })),
       };
       if (isEdit) await api.patch(`/hotels/${initial.id}`, payload);
@@ -73,25 +81,26 @@ function HotelDialog({ open, onOpenChange, initial, onSaved }) {
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-bold uppercase tracking-[0.15em]">Room categories & meal-plan rates (per night)</Label>
-            <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => ({ ...f, rooms: [...f.rooms, { category: "", cp: "", map: "", ap: "", single_rate: "", extra_bed_adult: "", cwb: "", cnb: "" }] }))} data-testid="hotel-add-room-btn"><Plus className="w-3 h-3 mr-1" /> Room</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => ({ ...f, rooms: [...f.rooms, EMPTY_ROOM()] }))} data-testid="hotel-add-room-btn"><Plus className="w-3 h-3 mr-1" /> Room</Button>
           </div>
           {form.rooms.map((r, i) => (
             <div key={i} className="rounded-md border border-border p-2 space-y-2" data-testid={`hotel-room-${i}`}>
-              <div className="grid grid-cols-4 gap-2 items-center">
-                <Input placeholder="Category" value={r.category} onChange={(e) => setRoom(i, "category", e.target.value)} data-testid={`hotel-room-cat-${i}`} />
-                <Input type="number" placeholder="CP (dbl)" value={r.cp} onChange={(e) => setRoom(i, "cp", e.target.value)} data-testid={`hotel-room-cp-${i}`} />
-                <Input type="number" placeholder="MAP (dbl)" value={r.map} onChange={(e) => setRoom(i, "map", e.target.value)} data-testid={`hotel-room-map-${i}`} />
-                <Input type="number" placeholder="AP (dbl)" value={r.ap} onChange={(e) => setRoom(i, "ap", e.target.value)} data-testid={`hotel-room-ap-${i}`} />
+              <Input placeholder="Room category (e.g. Deluxe)" value={r.category} onChange={(e) => setRoom(i, "category", e.target.value)} data-testid={`hotel-room-cat-${i}`} />
+              <div className="hidden sm:grid grid-cols-6 gap-1.5 px-1">
+                <span />
+                {ROOM_OCC.map(([, label]) => <span key={label} className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground text-center">{label}</span>)}
               </div>
-              <div className="grid grid-cols-4 gap-2 items-center">
-                <Input type="number" placeholder="Single occ." value={r.single_rate} onChange={(e) => setRoom(i, "single_rate", e.target.value)} data-testid={`hotel-room-single-${i}`} />
-                <Input type="number" placeholder="Extra bed (adult)" value={r.extra_bed_adult} onChange={(e) => setRoom(i, "extra_bed_adult", e.target.value)} data-testid={`hotel-room-extrabed-${i}`} />
-                <Input type="number" placeholder="CWB" value={r.cwb} onChange={(e) => setRoom(i, "cwb", e.target.value)} data-testid={`hotel-room-cwb-${i}`} />
-                <Input type="number" placeholder="CNB" value={r.cnb} onChange={(e) => setRoom(i, "cnb", e.target.value)} data-testid={`hotel-room-cnb-${i}`} />
-              </div>
+              {ROOM_PLANS.map((plan) => (
+                <div key={plan} className="grid grid-cols-6 gap-1.5 items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{plan.toUpperCase()}</span>
+                  {ROOM_OCC.map(([f, label]) => (
+                    <Input key={f} type="number" min="0" placeholder={label} value={r[`${plan}_${f}`]} onChange={(e) => setRoom(i, `${plan}_${f}`, e.target.value)} data-testid={`hotel-room-${plan}-${f}-${i}`} className="px-2" />
+                  ))}
+                </div>
+              ))}
             </div>
           ))}
-          <p className="text-[10px] text-muted-foreground">CP/MAP/AP are per-night double-occupancy base rates. Single occupancy, Extra Bed (adult), Child With Bed (CWB) and Child No Bed (CNB) are per-night add-ons used by the auto-costing engine.</p>
+          <p className="text-[10px] text-muted-foreground">Per-night rates by meal plan and occupancy: Sgl (single occupancy), Dbl (double occupancy base), XBed (extra bed — adult), CWB (child with bed), CNB (child no bed). The auto-costing engine picks the right column based on the meal plan and headcount.</p>
         </div>
 
         <div className="space-y-2 pt-2">
@@ -226,7 +235,7 @@ export default function Vendors() {
                       <TableCell className="font-medium">{h.name}</TableCell>
                       <TableCell>{h.destination}</TableCell>
                       <TableCell><Badge variant="secondary" className="rounded-full">{h.star}★</Badge></TableCell>
-                      <TableCell>{h.rooms?.length ? `${h.rooms[0].category} · ${inr(Math.min(...h.rooms.map((r) => r.cp || Infinity)))}+` : "—"}</TableCell>
+                      <TableCell>{h.rooms?.length ? `${h.rooms[0].category} · ${inr(Math.min(...h.rooms.map((r) => r.cp_double || r.cp || Infinity)))}+` : "—"}</TableCell>
                       <TableCell>{h.seasons?.length ? h.seasons.map((s) => `${s.label} +${s.surcharge_pct}%`).join(", ") : "—"}</TableCell>
                       <TableCell className="text-xs">{h.contact_name}<br />{h.phone}</TableCell>
                       {canEdit && (

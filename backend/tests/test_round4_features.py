@@ -114,10 +114,10 @@ class TestOccupancyExtras:
         r = admin.post(f"{API}/itineraries/preview-cost", json=payload, timeout=30)
         assert r.status_code == 200, r.text
         c = r.json()
-        assert c["extra_bed_cost"] == 1200
-        assert c["cwb_cost"] == 900
-        assert c["cnb_cost"] == 400
-        assert c["hotel_cost"] == 6700
+        assert c["extra_bed_cost"] == 1500
+        assert c["cwb_cost"] == 1100
+        assert c["cnb_cost"] == 500
+        assert c["hotel_cost"] == 7300
 
     def test_share_payload_has_no_internal_breakdown(self, admin):
         h, _ = _deluxe_hotel(admin)

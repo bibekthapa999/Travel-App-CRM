@@ -53,6 +53,11 @@ Production-ready Travel CRM web app with: Omni-Channel Sharing Engine (one-click
 - Policies & Terms auto-expand on PDF/print: flushSync on beforeprint + Download PDF button expands before print + forceMount accordion content + print-media CSS fallback (verified synchronously and in print emulation)
 - Guest share page no longer fires auth bootstrap (no 401 console noise); night/nights pluralization fixed
 
+## Implemented (2026-08-29, round 6 — owner requests)
+- Hotel room pricing matrix is now per meal plan: CP/MAP/AP × (Single / Dbl / Extra Bed / CWB / CNB) — 15 inputs per room; auto-costing resolves rates by selected meal plan with legacy flat-schema fallback
+- Multi-vehicle per day: builder allows adding multiple vehicles to the same day (large groups, e.g. 6 pax = 2 sedans); costing sums all, bookings create confirmations for every vendor, guest view shows joined labels
+- Fixed: New Inquiry dialog now scrolls (max-h + overflow-y); empty vehicle slots preserved when editing first select; guest hero brand text has a scrim
+
 ## Backlog
 - P0: (none pending)
 - P1: WhatsApp Business Cloud API interactive messages (needs Meta credentials); true PDF generation via @react-pdf/renderer (currently print-to-PDF); editable email body composer (blocked by managed-email G4 guardrails — currently fixed templates); move branding banners to object storage (currently base64 in Mongo)

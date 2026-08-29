@@ -139,9 +139,9 @@ export default function SharedItinerary() {
       <header className="relative min-h-[55vh] sm:min-h-[72vh] flex items-end" data-testid="share-hero">
         <img src={data.hero_image || FALLBACK_HERO} alt={data.destination} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
-        <div className="absolute top-5 left-5 sm:left-8">
+        <div className="absolute top-5 left-5 sm:left-8 rounded-lg bg-black/35 backdrop-blur-sm px-3 py-2">
           <p className="font-heading text-white font-bold text-sm tracking-wide drop-shadow">{data.brand}</p>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-white/70 italic normal-case tracking-wide">With {data.brand}, your adventure awakens.</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/80 italic normal-case tracking-wide">With {data.brand}, your adventure awakens.</p>
         </div>
         <div className="relative z-10 max-w-5xl mx-auto w-full px-5 sm:px-8 pb-10 sm:pb-14 text-white">
           <p className="text-xs uppercase tracking-[0.35em] text-white/80 mb-2">A journey crafted for {data.customer_name}</p>

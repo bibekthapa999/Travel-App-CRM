@@ -59,7 +59,7 @@ function LeadDialog({ open, onOpenChange, initial, onSaved }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" data-testid="lead-dialog">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="lead-dialog">
         <DialogHeader>
           <DialogTitle className="font-heading">{isEdit ? "Edit lead" : "New inquiry"}</DialogTitle>
         </DialogHeader>

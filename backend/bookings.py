@@ -52,11 +52,17 @@ async def create_booking(data: BookingIn, user: dict = Depends(require_roles("ad
                     "detail": f"{d.get('room_category', '')} room, {d.get('meal_plan', 'CP').upper()} plan, {sum(1 for x in itin['days'] if x.get('hotel_id') == hid)} night(s)",
                     "status": "pending",
                 })
-        vid = d.get("vehicle_id") or ""
-        if vid and vid not in seen_vehicles:
+        vids = d.get("vehicle_ids") or ([d["vehicle_id"]] if d.get("vehicle_id") else [])
+        for vid in vids:
+            if vid in seen_vehicles:
+                continue
             seen_vehicles.add(vid)
             vehicle = await db.vehicles.find_one({"id": vid}, {"_id": 0})
             if vehicle:
+                day_count = sum(
+                    1 for x in itin["days"]
+                    if vid in (x.get("vehicle_ids") or ([x["vehicle_id"]] if x.get("vehicle_id") else []))
+                )
                 confs.append({
                     "id": str(uuid.uuid4()),
                     "vendor_type": "vehicle",
@@ -64,7 +70,7 @@ async def create_booking(data: BookingIn, user: dict = Depends(require_roles("ad
                     "vendor_name": vehicle.get("vendor_name", ""),
                     "phone": vehicle.get("phone", ""),
                     "email": vehicle.get("email", ""),
-                    "detail": f"{vehicle.get('vehicle_type', '')}, {vehicle.get('route_from', '')} to {vehicle.get('route_to', '')}, {sum(1 for x in itin['days'] if x.get('vehicle_id') == vid)} day(s)",
+                    "detail": f"{vehicle.get('vehicle_type', '')}, {vehicle.get('route_from', '')} to {vehicle.get('route_to', '')}, {day_count} day(s)",
                     "status": "pending",
                 })
     seq = await next_seq("booking")

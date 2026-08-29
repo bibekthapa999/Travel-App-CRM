@@ -191,9 +191,9 @@ class TestOccupancyCosting:
         r = admin.post(f"{API}/itineraries/preview-cost", json=self._payload(3, 1), timeout=30)
         assert r.status_code == 200, r.text
         c = r.json()
-        assert c["hotel_cost"] == 6300  # 4200 double + 1200 extra adult + 900 cwb
-        assert c["total"] == 8268.75
-        assert c["per_person"] == round(8268.75 / 4, 2)
+        assert c["hotel_cost"] == 6800  # MAP: 4200 double + 1500 extra adult + 1100 cwb (per-plan matrix)
+        assert c["total"] == 8925.0
+        assert c["per_person"] == round(8925.0 / 4, 2)
 
     def test_two_adults_only(self, admin):
         c = admin.post(f"{API}/itineraries/preview-cost", json=self._payload(2), timeout=30).json()
@@ -202,12 +202,12 @@ class TestOccupancyCosting:
 
     def test_single_occupancy_uses_single_rate(self, admin):
         c = admin.post(f"{API}/itineraries/preview-cost", json=self._payload(1), timeout=30).json()
-        assert c["hotel_cost"] == 2800
+        assert c["hotel_cost"] == 3400  # map_single (per-plan matrix)
 
     def test_cnb_and_meal_plans(self, admin):
         c = admin.post(f"{API}/itineraries/preview-cost", json=self._payload(4, 1, 1, meal="ap"), timeout=30).json()
-        # 2 pairs * 4800 + 900 cwb + 400 cnb
-        assert c["hotel_cost"] == 4800 * 2 + 900 + 400
+        # 2 pairs * 4800 (ap_double) + 1300 (ap_cwb) + 600 (ap_cnb)
+        assert c["hotel_cost"] == 4800 * 2 + 1300 + 600
         c2 = admin.post(f"{API}/itineraries/preview-cost", json=self._payload(2, meal="cp"), timeout=30).json()
         assert c2["hotel_cost"] == 3500
 
@@ -252,8 +252,8 @@ class TestShareAndAccept:
 
     def test_costing_saved_on_itinerary(self, admin):
         itin = admin.get(f"{API}/itineraries/{STATE['itin_id']}", timeout=30).json()
-        assert itin["costing"]["hotel_cost"] == 6300
-        assert itin["costing"]["total"] == 8268.75
+        assert itin["costing"]["hotel_cost"] == 6800
+        assert itin["costing"]["total"] == 8925.0
 
     def test_lead_moved_to_proposal_sent(self, admin):
         lead = next(x for x in admin.get(f"{API}/leads", timeout=30).json() if x["id"] == STATE["lead_id"])
@@ -264,7 +264,7 @@ class TestShareAndAccept:
         assert r.status_code == 200, r.text
         d = r.json()
         assert d["destination"] == "Sikkim/Darjeeling"
-        assert d["total"] == 8268.75
+        assert d["total"] == 8925.0
         assert d["adults"] == 3 and d["cwb"] == 1
         assert d["header_banner"].startswith("data:image/png;base64,")
         assert d["footer_banner"].startswith("data:image/png;base64,")

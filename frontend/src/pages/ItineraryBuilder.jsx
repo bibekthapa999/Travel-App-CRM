@@ -14,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const EMPTY_DAY = () => ({ day: 1, title: "", route_type: "transfer", from_place: "", to_place: "", via: "", excursion: "", description: "", hotel_id: "", room_category: "", meal_plan: "cp", vehicle_id: "", activities: "", activity_cost: "" });
+const EMPTY_DAY = () => ({ day: 1, title: "", route_type: "transfer", from_place: "", to_place: "", via: "", excursion: "", description: "", hotel_id: "", room_category: "", meal_plan: "cp", vehicle_ids: [], activities: "", activity_cost: "" });
 const EMPTY_TERMS = { inclusions: "", exclusions: "", payment_policy: "", cancellation_policy: "", important_notes: "" };
 
 export default function ItineraryBuilder() {
@@ -51,7 +51,7 @@ export default function ItineraryBuilder() {
           customer_phone: d.customer_phone || "", destination: d.destination || "", start_date: d.start_date || "",
           pax: d.pax || 2, adults: d.adults || d.pax || 2, cwb: d.cwb || 0, cnb: d.cnb || 0,
           lead_id: d.lead_id || "", notes: d.notes || "",
-          days: d.days?.length ? d.days : [EMPTY_DAY()],
+          days: d.days?.length ? d.days.map((day) => ({ ...day, vehicle_ids: day.vehicle_ids || (day.vehicle_id ? [day.vehicle_id] : []) })) : [EMPTY_DAY()],
           pricing: { margin_pct: 25, gst_enabled: true, gst_pct: 5, discount: 0, ...(d.pricing || {}) },
           terms: { ...EMPTY_TERMS, ...(d.terms || {}) },
         });
@@ -266,7 +266,7 @@ export default function ItineraryBuilder() {
                           <SelectTrigger data-testid={`day-room-${i + 1}`}><SelectValue placeholder="Select room" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Select room</SelectItem>
-                            {hotel.rooms.map((r) => <SelectItem key={r.category} value={r.category}>{r.category} — {inr(r[d.meal_plan] || r.cp)}/night</SelectItem>)}
+                            {hotel.rooms.map((r) => <SelectItem key={r.category} value={r.category}>{r.category} — {inr(r[`${d.meal_plan}_double`] || r[d.meal_plan] || r.cp_double || r.cp)}/night</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -283,15 +283,27 @@ export default function ItineraryBuilder() {
                       </div>
                     </>
                   )}
-                  <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1"><Bus className="w-3.5 h-3.5" /> Vehicle</Label>
-                    <Select value={d.vehicle_id || "none"} onValueChange={(v) => setDay(i, "vehicle_id", v === "none" ? "" : v)}>
-                      <SelectTrigger data-testid={`day-vehicle-${i + 1}`}><SelectValue placeholder="No vehicle" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No vehicle</SelectItem>
-                        {vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_type} — {v.vendor_name} ({inr(v.per_day_rate)}/day)</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="flex items-center gap-1"><Bus className="w-3.5 h-3.5" /> Vehicles (add multiple for large groups)</Label>
+                    {(d.vehicle_ids?.length ? d.vehicle_ids : [""]).map((vid, vi) => (
+                      <div key={vi} className="flex gap-2">
+                        <Select value={vid || "none"} onValueChange={(v) => setForm((f) => { const days = [...f.days]; const arr = [...(days[i].vehicle_ids?.length ? days[i].vehicle_ids : [""])]; arr[vi] = v === "none" ? "" : v; days[i] = { ...days[i], vehicle_ids: arr }; return { ...f, days }; })}>
+                          <SelectTrigger data-testid={vi === 0 ? `day-vehicle-${i + 1}` : `day-vehicle-${i + 1}-${vi}`}><SelectValue placeholder="No vehicle" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No vehicle</SelectItem>
+                            {vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_type} — {v.vendor_name} ({inr(v.per_day_rate)}/day)</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {(d.vehicle_ids?.length || 0) > 0 && (
+                          <Button type="button" variant="ghost" size="icon" className="text-destructive shrink-0" onClick={() => setForm((f) => { const days = [...f.days]; days[i] = { ...days[i], vehicle_ids: days[i].vehicle_ids.filter((_, j) => j !== vi) }; return { ...f, days }; })} data-testid={`day-vehicle-remove-${i + 1}-${vi}`}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={() => setForm((f) => { const days = [...f.days]; days[i] = { ...days[i], vehicle_ids: [...(days[i].vehicle_ids || []), ""] }; return { ...f, days }; })} data-testid={`day-add-vehicle-${i + 1}`}>
+                      <Plus className="w-3.5 h-3.5 mr-1" /> Add another vehicle
+                    </Button>
                   </div>
                   <div className="space-y-1.5"><Label>Activity cost (₹)</Label><Input type="number" min="0" value={d.activity_cost} onChange={(e) => setDay(i, "activity_cost", e.target.value)} data-testid={`day-activity-cost-${i + 1}`} /></div>
                   <div className="space-y-1.5 sm:col-span-2"><Label>Activities / notes</Label><Textarea rows={2} value={d.activities} onChange={(e) => setDay(i, "activities", e.target.value)} placeholder="Solang Valley visit, paragliding, mall road…" data-testid={`day-activities-${i + 1}`} /></div>
@@ -358,9 +370,9 @@ export default function ItineraryBuilder() {
             <Input type="number" min="0" value={form.pricing.discount} onChange={(e) => setPricing("discount", Number(e.target.value) || 0)} data-testid="discount-input" />
           </div>
           <div className="border-t border-border pt-4 space-y-2 text-sm" data-testid="cost-breakdown">
-            <div className="flex justify-between"><span className="text-muted-foreground">Hotels</span><span>{inr(costing?.hotel_cost)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Transport</span><span>{inr(costing?.transport_cost)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Activities</span><span>{inr(costing?.activity_cost)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Hotels</span><span data-testid="cost-hotels">{inr(costing?.hotel_cost)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Transport</span><span data-testid="cost-transport">{inr(costing?.transport_cost)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Activities</span><span data-testid="cost-activities">{inr(costing?.activity_cost)}</span></div>
             <div className="flex justify-between font-medium"><span>Base cost</span><span>{inr(costing?.base_cost)}</span></div>
             <div className="flex justify-between text-emerald-600"><span>Margin</span><span>+ {inr(costing?.margin_amount)}</span></div>
             {Number(form.pricing.discount) > 0 && <div className="flex justify-between text-destructive"><span>Discount</span><span>− {inr(costing?.discount)}</span></div>}
