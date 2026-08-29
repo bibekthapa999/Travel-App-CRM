@@ -135,6 +135,27 @@ async def seed_extras():
                 "created_at": now,
             },
         ])
+    combo_routes = [
+        {
+            "from_place": "Gangtok", "to_place": "Pelling", "via": "Ravangla", "excursion": "",
+            "day_title": "Transfer to Pelling via Ravangla Sightseeing",
+            "image_url": "https://images.unsplash.com/photo-1661970072086-b7b1c3d7c787?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwxfHxEYXJqZWVsaW5nJTIwdGVhJTIwZ2FyZGVuJTIwaGlsbHN8ZW58MHx8fHwxNzg3OTk5MjcxMA&ixlib=rb-4.1.0&q=85",
+            "description": "<p>After breakfast, check out and drive towards <strong>Pelling</strong> in West Sikkim, breaking the journey at the serene town of <strong>Ravangla</strong>. Visit the majestic <strong>Buddha Park (Tathagata Tsal)</strong> with its 130-ft statue of Lord Buddha set against the Himalayan panorama, and stroll through the manicured gardens. Continue the scenic drive through cardamom forests and terraced valleys to Pelling. On arrival, check in to your hotel. Evening at leisure with views of the Kanchenjunga range (weather permitting).</p>",
+        },
+        {
+            "from_place": "Gangtok", "to_place": "", "via": "", "excursion": "Tsomgo Lake & Baba Mandir",
+            "day_title": "Full Day Excursion to Tsomgo Lake & Baba Mandir",
+            "image_url": "https://images.unsplash.com/photo-1697999145250-3cb1eca225c3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwyfHxHYW5ndG9rJTIwU2lra2ltJTIwbW91bnRhaW5zJTIwbW9uYXN0ZXJ5fGVufDB8fHx8MTc4Nzk5OTI3Mnww&ixlib=rb-4.1.0&q=85",
+            "description": "<p>After an early breakfast, set out on a full-day excursion to the sacred <strong>Tsomgo Lake</strong> (12,313 ft), a glacial lake whose colours shift with the seasons — locals believe monks once foretold the future from its waters. Continue to the revered <strong>Baba Harbhajan Singh Mandir</strong>, a shrine steeped in legend and maintained by the Indian Army. Return to Gangtok by evening. Overnight stay at your Gangtok hotel.</p>",
+        },
+    ]
+    for cr in combo_routes:
+        exists = await db.routes.find_one(
+            {"from_place": cr["from_place"], "to_place": cr["to_place"], "via": cr["via"], "excursion": cr["excursion"]}
+        )
+        if not exists:
+            cr.update(id=str(uuid.uuid4()), created_at=now)
+            await db.routes.insert_one({**cr})
     if await db.terms_templates.count_documents({}) == 0:
         await db.terms_templates.insert_one({
             "id": str(uuid.uuid4()),

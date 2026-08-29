@@ -10,8 +10,22 @@ from htmlutil import sanitize_html
 routes_router = APIRouter(prefix="/api/routes", tags=["routes"])
 settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-ROUTE_FIELDS = {"from_place", "to_place", "description", "image_url"}
+ROUTE_FIELDS = {"from_place", "to_place", "via", "excursion", "day_title", "description", "image_url"}
 TERM_FIELDS = {"name", "inclusions", "exclusions", "payment_policy", "cancellation_policy", "important_notes"}
+
+
+def auto_title(from_place: str, to_place: str = "", via: str = "", excursion: str = "") -> str:
+    if excursion:
+        return f"Full Day Excursion to {excursion}"
+    if via and to_place:
+        return f"Transfer to {to_place} via {via} Sightseeing"
+    if to_place:
+        return f"Transfer to {to_place}"
+    return ""
+
+
+def _norm(v: str) -> str:
+    return (v or "").strip().lower()
 
 
 # --- Route Master ---
@@ -22,19 +36,33 @@ async def list_routes(user: dict = Depends(get_current_user)):
 
 
 @routes_router.get("/lookup")
-async def lookup_route(from_place: str = "", to_place: str = "", user: dict = Depends(get_current_user)):
-    if not from_place or not to_place:
-        raise HTTPException(status_code=400, detail="from_place and to_place are required")
-    route = await db.routes.find_one(
-        {
-            "from_place": {"$regex": f"^{from_place}$", "$options": "i"},
-            "to_place": {"$regex": f"^{to_place}$", "$options": "i"},
-        },
-        {"_id": 0},
-    )
-    if not route:
-        return {"found": False, "description": "", "image_url": ""}
-    return {"found": True, "description": route.get("description", ""), "image_url": route.get("image_url", "")}
+async def lookup_route(from_place: str = "", to_place: str = "", via: str = "", excursion: str = "", user: dict = Depends(get_current_user)):
+    """Find the best route-master match for a From/To/Via or Base/Excursion combo and auto-generate the day title."""
+    if not from_place or (not to_place and not excursion):
+        raise HTTPException(status_code=400, detail="from_place and to_place or excursion are required")
+    f, t, v, e = _norm(from_place), _norm(to_place), _norm(via), _norm(excursion)
+    candidates = [r for r in await db.routes.find({}, {"_id": 0}).to_list(500) if _norm(r.get("from_place")) == f]
+
+    def score(r):
+        if e:
+            if _norm(r.get("excursion")) != e:
+                return -1
+            return 10 + (2 if _norm(r.get("to_place")) == t else 0) + (2 if _norm(r.get("via")) == v else 0)
+        if _norm(r.get("excursion")):
+            return -1
+        if _norm(r.get("to_place")) != t:
+            return -1
+        return 10 + (2 if _norm(r.get("via")) == v else 0) - (1 if not v and r.get("via") else 0)
+
+    best = max(candidates, key=score, default=None)
+    if best is None or score(best) < 0:
+        return {"found": False, "description": "", "image_url": "", "day_title": auto_title(from_place, to_place, via, excursion)}
+    return {
+        "found": True,
+        "description": best.get("description", ""),
+        "image_url": best.get("image_url", ""),
+        "day_title": best.get("day_title") or auto_title(from_place, to_place, via, excursion),
+    }
 
 
 @routes_router.post("")
@@ -44,6 +72,9 @@ async def create_route(payload: dict = Body(...), user: dict = Depends(require_r
     doc = {k: payload.get(k) for k in ROUTE_FIELDS if k in payload}
     doc.setdefault("description", "")
     doc["description"] = sanitize_html(doc["description"])
+    doc.setdefault("via", "")
+    doc.setdefault("excursion", "")
+    doc.setdefault("day_title", "")
     doc.setdefault("image_url", "")
     doc.update(id=str(uuid.uuid4()), created_at=datetime.now(timezone.utc).isoformat())
     await db.routes.insert_one({**doc})

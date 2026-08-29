@@ -38,6 +38,12 @@ Production-ready Travel CRM web app with: Omni-Channel Sharing Engine (one-click
 - Premium magazine-style guest view /share/:token: sector banner, full-bleed hero (route image preferred), editorial timeline with image grids + rich text, pricing card, policies accordions, sticky mobile action bar (Accept Quote → accepted + lead won; Download PDF via print; Chat on WhatsApp to company number)
 - Company WhatsApp setting; bleach-based HTML sanitization at write + share time (XSS protection)
 
+## Implemented (2026-08-29, round 4 — advanced routing & guest UI v2)
+- Route Master upgraded with Via (en-route stop), Excursion (day trip), and Day Title fields; lookup scores From+To+Via / Base+Excursion combos and always returns an auto-generated day title (e.g. "Transfer to Pelling via Ravangla Sightseeing", "Full Day Excursion to Tsomgo Lake & Baba Mandir"); seeded combo routes
+- Builder: per-day routing type select (Transfer / Transfer via stop / Day excursion) with conditional From/To/Via/Excursion selects; auto-fetches day title + rich description into editable fields
+- Guest view v2: day dates + via/excursion map-pin badges, "Your Hotels" stay cards (image, room, meal plan, check-in/out, nights), transparent price-breakdown table (accommodation, extra bed/CWB/CNB lines, transport, activities, services & handling, GST — sums exactly to total), sticky bar with Approve Itinerary / Share to WhatsApp / Download PDF / Chat
+- Costing engine now tracks extra_bed/cwb/cnb cost components
+
 ## Backlog
 - P0: (none pending)
 - P1: WhatsApp Business Cloud API interactive messages (needs Meta credentials); true PDF generation via @react-pdf/renderer (currently print-to-PDF); editable email body composer (blocked by managed-email G4 guardrails — currently fixed templates); move branding banners to object storage (currently base64 in Mongo)

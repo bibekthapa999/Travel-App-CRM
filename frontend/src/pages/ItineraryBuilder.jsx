@@ -14,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const EMPTY_DAY = () => ({ day: 1, title: "", from_place: "", to_place: "", description: "", hotel_id: "", room_category: "", meal_plan: "cp", vehicle_id: "", activities: "", activity_cost: "" });
+const EMPTY_DAY = () => ({ day: 1, title: "", route_type: "transfer", from_place: "", to_place: "", via: "", excursion: "", description: "", hotel_id: "", room_category: "", meal_plan: "cp", vehicle_id: "", activities: "", activity_cost: "" });
 const EMPTY_TERMS = { inclusions: "", exclusions: "", payment_policy: "", cancellation_policy: "", important_notes: "" };
 
 export default function ItineraryBuilder() {
@@ -95,23 +95,34 @@ export default function ItineraryBuilder() {
   const setTerm = (k, v) => setForm((f) => ({ ...f, terms: { ...f.terms, [k]: v } }));
 
   const routeFroms = [...new Set(routes.map((r) => r.from_place))];
-  const routeTos = (from) => [...new Set(routes.filter((r) => !from || r.from_place === from).map((r) => r.to_place))];
+  const routeTos = (from) => [...new Set(routes.filter((r) => r.from_place === from && r.to_place).map((r) => r.to_place))];
+  const routeVias = (from, to) => [...new Set(routes.filter((r) => r.from_place === from && r.to_place === to && r.via).map((r) => r.via))];
+  const routeExcursions = (from) => [...new Set(routes.filter((r) => r.from_place === from && r.excursion).map((r) => r.excursion))];
 
-  const fetchRouteDesc = async (i, from, to) => {
-    if (!from || !to) return;
+  const fetchRouteDesc = async (i, day) => {
+    const { from_place, to_place, via, excursion, route_type } = day;
+    if (!from_place) return;
+    if (route_type === "excursion" ? !excursion : !to_place) return;
     try {
-      const { data } = await api.get("/routes/lookup", { params: { from_place: from, to_place: to } });
-      if (data.found) {
-        setDay(i, "description", data.description);
-        toast.success("Route description auto-loaded — tweak it below");
-      }
+      const { data } = await api.get("/routes/lookup", { params: { from_place, to_place, via, excursion } });
+      setForm((f) => {
+        const days = [...f.days];
+        days[i] = {
+          ...days[i],
+          ...(data.day_title ? { title: data.day_title } : {}),
+          ...(data.found && data.description ? { description: data.description } : {}),
+        };
+        return { ...f, days };
+      });
+      if (data.found) toast.success("Route title & description auto-loaded — tweak freely");
+      else if (data.day_title) toast.info("Day title auto-generated");
     } catch { /* no route master match */ }
   };
 
-  const setRoutePoint = (i, key, value) => {
+  const setRouteField = (i, key, value) => {
     const day = { ...form.days[i], [key]: value };
-    setDay(i, key, value);
-    fetchRouteDesc(i, key === "from_place" ? value : day.from_place, key === "to_place" ? value : day.to_place);
+    setForm((f) => { const days = [...f.days]; days[i] = day; return { ...f, days }; });
+    fetchRouteDesc(i, day);
   };
 
   const save = async () => {
@@ -178,10 +189,21 @@ export default function ItineraryBuilder() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5"><Label>Day title</Label><Input value={d.title} onChange={(e) => setDay(i, "title", e.target.value)} placeholder="Arrival & local sightseeing" data-testid={`day-title-${i + 1}`} /></div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:col-span-2">
                     <div className="space-y-1.5">
-                      <Label>From</Label>
-                      <Select value={d.from_place || "none"} onValueChange={(v) => setRoutePoint(i, "from_place", v === "none" ? "" : v)}>
+                      <Label>Routing type</Label>
+                      <Select value={d.route_type || "transfer"} onValueChange={(v) => setRouteField(i, "route_type", v)}>
+                        <SelectTrigger data-testid={`day-routetype-${i + 1}`}><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="transfer">Transfer (A → B)</SelectItem>
+                          <SelectItem value="via">Transfer via stop (A → B via C)</SelectItem>
+                          <SelectItem value="excursion">Day excursion (returns to base)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>{d.route_type === "excursion" ? "Base" : "From"}</Label>
+                      <Select value={d.from_place || "none"} onValueChange={(v) => setRouteField(i, "from_place", v === "none" ? "" : v)}>
                         <SelectTrigger data-testid={`day-from-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Select</SelectItem>
@@ -189,16 +211,42 @@ export default function ItineraryBuilder() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>To</Label>
-                      <Select value={d.to_place || "none"} onValueChange={(v) => setRoutePoint(i, "to_place", v === "none" ? "" : v)}>
-                        <SelectTrigger data-testid={`day-to-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Select</SelectItem>
-                          {routeTos(d.from_place).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {d.route_type !== "excursion" && (
+                      <div className="space-y-1.5">
+                        <Label>To</Label>
+                        <Select value={d.to_place || "none"} onValueChange={(v) => setRouteField(i, "to_place", v === "none" ? "" : v)}>
+                          <SelectTrigger data-testid={`day-to-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select</SelectItem>
+                            {routeTos(d.from_place).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {d.route_type === "via" && (
+                      <div className="space-y-1.5">
+                        <Label>Via (en-route stop)</Label>
+                        <Select value={d.via || "none"} onValueChange={(v) => setRouteField(i, "via", v === "none" ? "" : v)}>
+                          <SelectTrigger data-testid={`day-via-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select</SelectItem>
+                            {routeVias(d.from_place, d.to_place).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {d.route_type === "excursion" && (
+                      <div className="space-y-1.5">
+                        <Label>Excursion</Label>
+                        <Select value={d.excursion || "none"} onValueChange={(v) => setRouteField(i, "excursion", v === "none" ? "" : v)}>
+                          <SelectTrigger data-testid={`day-excursion-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select</SelectItem>
+                            {routeExcursions(d.from_place).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" /> Hotel</Label>

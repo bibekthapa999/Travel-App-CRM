@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BedDouble, Bus, CalendarDays, CheckCircle2, Download, Loader2, MapPin, MessageCircle, Users } from "lucide-react";
+import { BedDouble, Bus, CalendarDays, CheckCircle2, Download, Loader2, MapPin, MessageCircle, Share2, Users } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { inr, fmtDate, digits } from "@/lib/format";
@@ -111,12 +111,29 @@ export default function SharedItinerary() {
               </span>
               <div className="absolute left-[-5px] top-14 w-2.5 h-2.5 rounded-full bg-primary" />
               <div className="pt-1">
-                {(d.from_place || d.to_place) && (
-                  <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-primary mb-1">
-                    {d.from_place}{d.from_place && d.to_place ? " → " : ""}{d.to_place}
+                {(d.from_place || d.to_place || d.excursion) && (
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-primary">
+                      {d.excursion ? `${d.from_place} · day trip` : `${d.from_place}${d.from_place && d.to_place ? " → " : ""}${d.to_place}`}
+                    </span>
+                    {d.via && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider" data-testid={`share-day-via-${d.day}`}>
+                        <MapPin className="w-3 h-3" /> via {d.via}
+                      </span>
+                    )}
+                    {d.excursion && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider" data-testid={`share-day-excursion-${d.day}`}>
+                        <MapPin className="w-3 h-3" /> Excursion: {d.excursion}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <h3 className="font-heading text-xl sm:text-2xl font-bold tracking-tight" data-testid={`share-day-title-${d.day}`}>{d.title || `Day ${d.day}`}</h3>
+                {data.start_date && (
+                  <p className="text-xs text-slate-400 mt-0.5" data-testid={`share-day-date-${d.day}`}>
+                    {new Date(new Date(data.start_date).getTime() + (d.day - 1) * 86400000).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
                   </p>
                 )}
-                <h3 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">{d.title || `Day ${d.day}`}</h3>
                 {d.images?.length > 0 && (
                   <div className={`grid gap-2 mt-4 ${d.images.length > 1 ? "grid-cols-3" : "grid-cols-2"}`}>
                     {d.images.slice(0, 3).map((img, j) => (
@@ -140,6 +157,38 @@ export default function SharedItinerary() {
           ))}
         </section>
 
+        {data.stays?.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="mt-24 sm:mt-32"
+            data-testid="share-stays"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-primary mb-2">Where you'll stay</p>
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-6">Your Hotels</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {data.stays.map((s, i) => (
+                <div key={i} className="rounded-2xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition-shadow" data-testid={`stay-card-${i}`}>
+                  {s.image_url && <img src={s.image_url} alt={s.hotel_name} loading="lazy" className="w-full h-40 object-cover" />}
+                  <div className="p-4 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-heading font-bold">{s.hotel_name}</p>
+                      <span className="shrink-0 rounded-full bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-wider">{s.nights}N</span>
+                    </div>
+                    {(s.room_category || s.meal_plan) && (
+                      <p className="text-sm text-slate-600">{s.room_category}{s.room_category && s.meal_plan ? " · " : ""}{s.meal_plan}</p>
+                    )}
+                    {s.check_in && (
+                      <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5" />{fmtDate(s.check_in)} → {fmtDate(s.check_out)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
         <motion.section
           initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="mt-24 sm:mt-32 rounded-2xl border border-slate-200 bg-white p-6 sm:p-10"
@@ -150,6 +199,20 @@ export default function SharedItinerary() {
             <p className="font-heading text-4xl sm:text-5xl font-black tracking-tight" data-testid="share-total">{inr(data.total)}</p>
             <p className="text-sm text-slate-500">{inr(data.per_person)} per person · all taxes included</p>
           </div>
+          {data.price_breakdown?.length > 0 && (
+            <div className="mt-6 border-t border-slate-200" data-testid="price-breakdown">
+              {data.price_breakdown.map((row, i) => (
+                <div key={i} className="flex justify-between py-2.5 border-b border-slate-100 text-sm">
+                  <span className="text-slate-600">{row.label}</span>
+                  <span className="font-medium tabular-nums">{inr(row.amount)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between py-3 font-heading font-bold text-base">
+                <span>Package total</span>
+                <span data-testid="breakdown-total">{inr(data.total)}</span>
+              </div>
+            </div>
+          )}
           <p className="text-xs text-slate-400 mt-4">Valid for 7 days. Prices may vary with hotel availability and seasonal surcharges.</p>
           {accepted && (
             <div className="mt-5 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700 font-medium" data-testid="accepted-banner">
@@ -188,7 +251,15 @@ export default function SharedItinerary() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex gap-2 sm:gap-3">
           <Button className="flex-1" onClick={acceptQuote} disabled={accepted || accepting} data-testid="accept-quote-btn">
             {accepting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : accepted ? <CheckCircle2 className="w-4 h-4 mr-2" /> : null}
-            {accepted ? "Quote Accepted" : "Accept Quote"}
+            {accepted ? "Itinerary Approved" : "Approve Itinerary"}
+          </Button>
+          <Button variant="outline" asChild>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`${data.brand} — ${data.destination} proposal: ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
+              target="_blank" rel="noopener noreferrer" data-testid="share-whatsapp-btn"
+            >
+              <Share2 className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Share</span>
+            </a>
           </Button>
           <Button variant="outline" onClick={() => window.print()} data-testid="download-pdf-btn">
             <Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Download PDF</span>

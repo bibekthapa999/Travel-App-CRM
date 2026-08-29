@@ -35,6 +35,7 @@ async def compute_costing(payload: dict) -> dict:
         except ValueError:
             start = None
     hotel_cost = transport_cost = activity_cost = 0.0
+    extra_bed_total = cwb_total = cnb_total = 0.0
     hotel_cache, vehicle_cache = {}, {}
     raw_adults = payload.get("adults")
     adults = int(raw_adults) if raw_adults not in (None, "") else int(payload.get("pax") or 2)
@@ -56,9 +57,14 @@ async def compute_costing(payload: dict) -> dict:
                     pairs, rem = divmod(max(adults, 1), 2)
                     if adults <= 1:
                         occ = _f(room.get("single_rate")) or double_rate
+                        extra = cb = cn = 0.0
                     else:
-                        occ = pairs * double_rate + (_f(room.get("extra_bed_adult")) if rem else 0)
-                    occ += cwb_n * _f(room.get("cwb")) + cnb_n * _f(room.get("cnb"))
+                        occ = pairs * double_rate
+                        extra = _f(room.get("extra_bed_adult")) if rem else 0.0
+                        occ += extra
+                        cb = cwb_n * _f(room.get("cwb"))
+                        cn = cnb_n * _f(room.get("cnb"))
+                        occ += cb + cn
                     mult = 1.0
                     for s in hotel.get("seasons", []):
                         try:
@@ -67,6 +73,9 @@ async def compute_costing(payload: dict) -> dict:
                         except (ValueError, KeyError):
                             continue
                     hotel_cost += occ * mult
+                    extra_bed_total += extra * mult
+                    cwb_total += cb * mult
+                    cnb_total += cn * mult
         vid = d.get("vehicle_id") or ""
         if vid:
             if vid not in vehicle_cache:
@@ -86,6 +95,9 @@ async def compute_costing(payload: dict) -> dict:
     r = lambda x: round(x, 2)
     return {
         "hotel_cost": r(hotel_cost),
+        "extra_bed_cost": r(extra_bed_total),
+        "cwb_cost": r(cwb_total),
+        "cnb_cost": r(cnb_total),
         "transport_cost": r(transport_cost),
         "activity_cost": r(activity_cost),
         "base_cost": r(base),
@@ -226,6 +238,9 @@ async def _resolve_day(day: dict) -> dict:
         "activities": day.get("activities", ""),
         "from_place": day.get("from_place", ""),
         "to_place": day.get("to_place", ""),
+        "via": day.get("via", ""),
+        "excursion": day.get("excursion", ""),
+        "route_type": day.get("route_type", "transfer"),
         "hotel_name": "",
         "room_category": day.get("room_category", ""),
         "meal_plan": MEAL_LABELS.get(day.get("meal_plan"), ""),
@@ -256,6 +271,54 @@ async def _resolve_day(day: dict) -> dict:
     return out
 
 
+def _price_breakdown(c: dict) -> list:
+    rows = []
+    extras = sum(c.get(k) or 0 for k in ("extra_bed_cost", "cwb_cost", "cnb_cost"))
+    room_only = round((c.get("hotel_cost") or 0) - extras, 2)
+    if room_only:
+        rows.append({"label": "Accommodation (double occupancy, selected meal plans)", "amount": room_only})
+    for key, label in (("extra_bed_cost", "Extra bed — adult"), ("cwb_cost", "Child with bed (CWB)"), ("cnb_cost", "Child without bed (CNB)")):
+        if c.get(key):
+            rows.append({"label": label, "amount": c[key]})
+    if c.get("transport_cost"):
+        rows.append({"label": "Private transport & driver", "amount": c["transport_cost"]})
+    if c.get("activity_cost"):
+        rows.append({"label": "Activities & experiences", "amount": c["activity_cost"]})
+    service = round(c.get("margin_amount", 0) - c.get("discount", 0), 2)
+    if service:
+        rows.append({"label": "Tour services & handling" if service > 0 else "Special discount", "amount": service})
+    if c.get("tax_amount"):
+        rows.append({"label": "GST", "amount": c["tax_amount"]})
+    return rows
+
+
+def _compute_stays(itin: dict, resolved_days: list) -> list:
+    try:
+        start = date.fromisoformat(itin.get("start_date", ""))
+    except ValueError:
+        start = None
+    stays = []
+    for d in resolved_days:
+        if not d.get("hotel_name"):
+            continue
+        idx = int(d.get("day") or 1) - 1
+        if stays and stays[-1]["hotel_name"] == d["hotel_name"]:
+            stays[-1]["nights"] += 1
+            if start:
+                stays[-1]["check_out"] = (start + timedelta(days=idx + 1)).isoformat()
+        else:
+            stays.append({
+                "hotel_name": d["hotel_name"],
+                "image_url": d["images"][0] if d.get("images") else "",
+                "room_category": d.get("room_category", ""),
+                "meal_plan": d.get("meal_plan", ""),
+                "nights": 1,
+                "check_in": (start + timedelta(days=idx)).isoformat() if start else "",
+                "check_out": (start + timedelta(days=idx + 1)).isoformat() if start else "",
+            })
+    return stays
+
+
 @share_router.get("/{token}")
 async def public_share(token: str):
     itin = await db.itineraries.find_one({"share_token": token}, {"_id": 0})
@@ -278,6 +341,8 @@ async def public_share(token: str):
         "days": days,
         "total": c.get("total", 0),
         "per_person": c.get("per_person", 0),
+        "price_breakdown": _price_breakdown(c),
+        "stays": _compute_stays(itin, days),
         "terms": {k: sanitize_html(v) for k, v in (itin.get("terms") or {}).items()},
         "accepted": itin.get("accepted", False),
         "header_banner": branding.get("header_banner", ""),

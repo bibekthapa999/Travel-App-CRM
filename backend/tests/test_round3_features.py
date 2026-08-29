@@ -34,7 +34,9 @@ class TestRouteMaster:
     def test_lookup_unknown_pair(self, admin):
         r = admin.get(f"{API}/routes/lookup", params={"from_place": "Nowhere", "to_place": "Nothing"}, timeout=30)
         assert r.status_code == 200
-        assert r.json() == {"found": False, "description": "", "image_url": ""}
+        d = r.json()
+        assert d["found"] is False and d["description"] == "" and d["image_url"] == ""
+        assert d["day_title"] == "Transfer to Nothing"  # auto-generated even without a route master match
 
     def test_lookup_requires_params(self, admin):
         assert admin.get(f"{API}/routes/lookup", params={"from_place": "IXB/NJP"}, timeout=30).status_code == 400
@@ -120,14 +122,15 @@ class TestTermsTemplates:
 class TestCompanySettings:
     def test_get_and_update_whatsapp(self, admin):
         r = admin.get(f"{API}/settings/company", timeout=30)
-        assert r.status_code == 200 and r.json()["whatsapp"] == "919876543210"
+        assert r.status_code == 200 and r.json()["whatsapp"].isdigit()
+        original = r.json()["whatsapp"]
         up = admin.put(f"{API}/settings/company", json={"whatsapp": "+91 98765-00001"}, timeout=30)
         assert up.status_code == 200, up.text
         assert up.json()["whatsapp"] == "919876500001", "digits should be normalised"
         assert admin.get(f"{API}/settings/company", timeout=30).json()["whatsapp"] == "919876500001"
         # restore
-        admin.put(f"{API}/settings/company", json={"whatsapp": "919876543210"}, timeout=30)
-        assert admin.get(f"{API}/settings/company", timeout=30).json()["whatsapp"] == "919876543210"
+        admin.put(f"{API}/settings/company", json={"whatsapp": original}, timeout=30)
+        assert admin.get(f"{API}/settings/company", timeout=30).json()["whatsapp"] == original
 
     def test_non_admin_cannot_update(self, sales):
         assert sales.put(f"{API}/settings/company", json={"whatsapp": "911111111111"}, timeout=30).status_code == 403

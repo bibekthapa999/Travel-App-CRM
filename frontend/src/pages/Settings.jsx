@@ -19,7 +19,7 @@ const TERM_SECTIONS = [
   ["important_notes", "Important Notes"],
 ];
 const EMPTY_TERMS = { name: "", inclusions: "", exclusions: "", payment_policy: "", cancellation_policy: "", important_notes: "" };
-const EMPTY_ROUTE = { from_place: "", to_place: "", image_url: "", description: "" };
+const EMPTY_ROUTE = { from_place: "", to_place: "", via: "", excursion: "", day_title: "", image_url: "", description: "" };
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -54,7 +54,7 @@ export default function Settings() {
   }, []);
 
   const saveRoute = async () => {
-    if (!routeForm.from_place.trim() || !routeForm.to_place.trim()) return toast.error("From and To are required");
+    if (!routeForm.from_place.trim() || (!routeForm.to_place.trim() && !routeForm.excursion.trim())) return toast.error("From plus a To or an Excursion are required");
     setBusy(true);
     try {
       if (routeDialog.initial?.id) await api.patch(`/routes/${routeDialog.initial.id}`, routeForm);
@@ -133,14 +133,16 @@ export default function Settings() {
             <div className="rounded-lg border border-border bg-card overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Description</TableHead><TableHead>Image</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+                  <TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Via</TableHead><TableHead>Excursion</TableHead><TableHead>Auto Day Title</TableHead><TableHead>Image</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
                 </TableHeader>
                 <TableBody data-testid="routes-table">
                   {routes.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.from_place}</TableCell>
-                      <TableCell>{r.to_place}</TableCell>
-                      <TableCell className="max-w-80 truncate text-xs text-muted-foreground">{stripHtml(r.description)}</TableCell>
+                      <TableCell>{r.to_place || "—"}</TableCell>
+                      <TableCell>{r.via || "—"}</TableCell>
+                      <TableCell>{r.excursion || "—"}</TableCell>
+                      <TableCell className="max-w-52 truncate text-xs text-muted-foreground">{r.day_title || "—"}</TableCell>
                       <TableCell>{r.image_url ? <img src={r.image_url} alt="" className="w-16 h-10 object-cover rounded" /> : "—"}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => { setRouteForm({ ...EMPTY_ROUTE, ...r }); setRouteDialog({ open: true, initial: r }); }} data-testid={`route-edit-${r.id}`}><Pencil className="w-4 h-4" /></Button>
@@ -148,7 +150,7 @@ export default function Settings() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {routes.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No routes yet</TableCell></TableRow>}
+                  {routes.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No routes yet</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>
@@ -252,7 +254,10 @@ export default function Settings() {
           <DialogHeader><DialogTitle className="font-heading">{routeDialog.initial ? "Edit route" : "Add route"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label>From *</Label><Input value={routeForm.from_place} onChange={(e) => setRouteForm({ ...routeForm, from_place: e.target.value })} placeholder="IXB/NJP" data-testid="route-from-input" /></div>
-            <div className="space-y-1.5"><Label>To *</Label><Input value={routeForm.to_place} onChange={(e) => setRouteForm({ ...routeForm, to_place: e.target.value })} placeholder="Gangtok" data-testid="route-to-input" /></div>
+            <div className="space-y-1.5"><Label>To (leave blank for excursions)</Label><Input value={routeForm.to_place} onChange={(e) => setRouteForm({ ...routeForm, to_place: e.target.value })} placeholder="Gangtok" data-testid="route-to-input" /></div>
+            <div className="space-y-1.5"><Label>Via (en-route stop, optional)</Label><Input value={routeForm.via} onChange={(e) => setRouteForm({ ...routeForm, via: e.target.value })} placeholder="Ravangla" data-testid="route-via-input" /></div>
+            <div className="space-y-1.5"><Label>Excursion (day trip, optional)</Label><Input value={routeForm.excursion} onChange={(e) => setRouteForm({ ...routeForm, excursion: e.target.value })} placeholder="Tsomgo Lake & Baba Mandir" data-testid="route-excursion-input" /></div>
+            <div className="space-y-1.5 col-span-2"><Label>Day title (auto-fetched into itineraries; auto-generated if blank)</Label><Input value={routeForm.day_title} onChange={(e) => setRouteForm({ ...routeForm, day_title: e.target.value })} placeholder="Transfer to Pelling via Ravangla Sightseeing" data-testid="route-title-input" /></div>
             <div className="space-y-1.5 col-span-2"><Label>Image URL (optional)</Label><Input value={routeForm.image_url} onChange={(e) => setRouteForm({ ...routeForm, image_url: e.target.value })} data-testid="route-image-input" /></div>
             <div className="space-y-1.5 col-span-2">
               <Label>Default description (auto-loads into itineraries)</Label>
