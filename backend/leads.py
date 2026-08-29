@@ -25,6 +25,9 @@ class LeadIn(BaseModel):
     travel_start: Optional[str] = ""
     travel_end: Optional[str] = ""
     pax: int = 2
+    adults: Optional[int] = 0
+    cwb: Optional[int] = 0
+    cnb: Optional[int] = 0
     budget: float = 0
     source: Optional[str] = ""
     notes: Optional[str] = ""
@@ -84,7 +87,7 @@ async def update_lead(lead_id: str, data: dict, user: dict = Depends(require_rol
     lead = await db.leads.find_one({"id": lead_id})
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    allowed = {"customer_name", "email", "phone", "destination", "travel_start", "travel_end", "pax", "budget", "source", "notes", "status"}
+    allowed = {"customer_name", "email", "phone", "destination", "travel_start", "travel_end", "pax", "adults", "cwb", "cnb", "budget", "source", "notes", "status"}
     updates = {k: v for k, v in data.items() if k in allowed}
     if "status" in updates and updates["status"] not in STATUSES:
         raise HTTPException(status_code=400, detail="Invalid status")

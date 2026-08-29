@@ -9,7 +9,7 @@ from database import db
 hotels_router = APIRouter(prefix="/api/hotels", tags=["hotels"])
 vehicles_router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
 
-HOTEL_FIELDS = {"name", "destination", "star", "contact_name", "phone", "email", "rooms", "seasons", "active"}
+HOTEL_FIELDS = {"name", "destination", "star", "contact_name", "phone", "email", "rooms", "seasons", "active", "image_url"}
 VEHICLE_FIELDS = {"vendor_name", "vehicle_type", "route_from", "route_to", "per_day_rate", "driver_charge", "phone", "email", "active"}
 
 

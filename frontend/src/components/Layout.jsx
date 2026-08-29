@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, KanbanSquare, Map, CalendarCheck, Building2, ReceiptIndianRupee,
-  Users, ChevronsLeft, Menu, LogOut, Moon, Sun, Palmtree,
+  Users, ChevronsLeft, Menu, LogOut, Moon, Sun, Palmtree, Settings as SettingsIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ const NAV = [
   { to: "/vendors", label: "Vendors", icon: Building2, roles: ["admin", "sales", "operations"] },
   { to: "/invoices", label: "Invoices", icon: ReceiptIndianRupee, roles: ["admin", "finance"] },
   { to: "/users", label: "Team", icon: Users, roles: ["admin"] },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, roles: ["admin"] },
 ];
 
 const ROLE_LABELS = { admin: "Admin", sales: "Sales Agent", operations: "Operations", finance: "Finance" };

@@ -1,140 +1,72 @@
 {
-  "theme": "Light/Dark Mode Toggle (Default: Light)",
+  "theme": "light",
   "typography": {
-    "fonts": {
-      "headings": "Outfit",
-      "body": "Inter",
-      "mono": "JetBrains Mono"
-    },
-    "hierarchy": {
-      "h1": "text-4xl sm:text-5xl font-black tracking-tight",
-      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
-      "h3": "text-xl sm:text-2xl font-semibold",
-      "h4": "text-lg sm:text-xl font-medium",
-      "body": "text-sm sm:text-base leading-relaxed",
-      "label": "text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground"
-    },
-    "instructions": "DO NOT use Inter or standard sans-serif for headings. Always apply tracking-tight to headings and uppercase tracking-widest for labels. Maintain high contrast."
+    "headings": "Outfit, sans-serif",
+    "body": "Inter, sans-serif",
+    "guidelines": "Use Outfit for all Headings (H1-H6) with tight tracking (tracking-tight) and varied weights (e.g., font-light or font-black). Use Inter for body text with generous line-height (leading-relaxed). Introduce 'Magazine Style' typographical hierarchy: massive section numbers, delicate overlines (uppercase, wide tracking), and high-contrast font weights."
   },
   "colors": {
-    "archetype": "Swiss & High-Contrast (Data-heavy CRM)",
-    "light": {
-      "background": "#F8FAFC",
-      "foreground": "#0F172A",
-      "surface": "#FFFFFF",
-      "primary": "#0284C7",
-      "primary_foreground": "#FFFFFF",
-      "accent": "#F97316",
-      "muted": "#F1F5F9",
-      "muted_foreground": "#64748B",
-      "border": "#E2E8F0"
-    },
-    "dark": {
-      "background": "#020617",
-      "foreground": "#F8FAFC",
-      "surface": "#0F172A",
-      "primary": "#38BDF8",
-      "primary_foreground": "#020617",
-      "accent": "#FB923C",
-      "muted": "#1E293B",
-      "muted_foreground": "#94A3B8",
-      "border": "#1E293B"
-    },
-    "semantic": {
-      "success": "#10B981",
-      "warning": "#F59E0B",
-      "danger": "#EF4444",
-      "info": "#3B82F6"
-    },
-    "instructions": "Never use pure black or pure white. Tint neutrals slightly towards cool slate (blue-ish). Limit primary color to CTAs and active states. Use semantic colors strictly for status badges (Pending/Confirmed/Rejected) and profit margins."
-  },
-  "layouts": {
-    "app_shell": "Collapsible sidebar navigation on the left (`w-16` collapsed, `w-64` expanded). Main content area takes remaining space. Fixed top header with breadcrumbs, search, and user profile.",
-    "dashboard_grid": "High Density Grid: Base `grid-cols-1 md:grid-cols-3 lg:grid-cols-4` with tight `gap-4` or `gap-6`. Summary metrics span 1 column, primary charts span 2-3 columns.",
-    "kanban_board": "Horizontal scrollable container with vertical lanes. Lanes have solid subtle backgrounds (`bg-muted/50`). Drag-and-drop cards must have `hover:-translate-y-1` and drop-shadow lift.",
-    "spacing_philosophy": "Generous outer padding (`p-6` to `p-8` for sections). Dense inner padding for tables and list items (`p-2` to `p-4`) to fit CRM data.",
-    "instructions": "Always optical align elements. Use Subgrid where nested alignment is needed. Ensure sidebar leaves main content scrollable independently. NO centered alignment on text blocks."
-  },
-  "components": {
-    "surfaces": "Neumorphic 'Clay & Crisp' variant for dashboard widgets: flat background, sharp 1px border (`border-border`), soft hover shadow. Do NOT use soft UI everywhere.",
-    "buttons": "Pill-shaped or sharp rounded corners (e.g., `rounded-md`). Primary buttons have strong background color with white text. Hover state must slightly increase brightness.",
-    "cards": "Subtle roundness (`rounded-lg`), 1px border. No shadows on rest state. Hover: slight shadow-lg.",
-    "inputs_forms": "Use Shadcn customized components. Light mode inputs have `bg-white` and subtle border. Focus states MUST use `ring-2 ring-primary/50`.",
-    "modals_sheets": "Use Glassmorphism (Crystal variant) for overlays (`backdrop-blur-xl bg-black/60`). The modal itself should be solid background with crisp borders.",
-    "status_badges": "Pill shaped (`rounded-full`), dense padding (`px-2.5 py-0.5`), bold small text. Background should be 10-20% opacity of the semantic color with text using 100% of the semantic color."
+    "background": "#F8FAFC",
+    "foreground": "#0F172A",
+    "primary": "#0284C7",
+    "accent": "#F97316",
+    "surface": "#FFFFFF",
+    "guidelines": "Maintain the CRM brand colors but apply them with an editorial sensibility. Use #0F172A for high-contrast primary text, #F8FAFC for the page background. Use Sky Blue (#0284C7) for primary CTAs and active states. Use Sunset Coral (#F97316) sparingly for alerts, badges, or special accents. Avoid generic SaaS styling; let the images provide the most color."
   },
   "visual_enhancers": {
-    "icons": "Use `lucide-react` for system icons. For dashboard density, keep icon sizes consistent (`w-4 h-4` to `w-5 h-5`).",
-    "motion": "Micro-interactions are mandatory. `transition-transform hover:-translate-y-0.5` for cards. Staggered fade-in (`framer-motion`) for list items. No 'transition: all'.",
-    "textures": "Add subtle SVG noise or grain background to the login page and public itinerary pages to prevent flatness."
+    "spacing": "Adopt the Generous Spacing Philosophy. Use py-24 or py-32 between major sections. Within the timeline, space days by gap-16 or gap-20.",
+    "surfaces": "Use crisp, solid surfaces with very subtle borders (border-slate-200) rather than heavy drop-shadows. This preserves the print-like, elegant feel of a brochure.",
+    "glassmorphism": "Apply high-end glassmorphism (backdrop-blur-xl bg-white/80 border-t border-slate-200) strictly to the mobile sticky action bar to keep it non-intrusive yet highly legible."
   },
-  "modules": {
-    "omni_channel_sharing": {
-      "instructions": "Design a clean modal with tabs (WhatsApp, Email, Copy Link). Include pre-formatted text preview areas.",
-      "components": ["Tabs", "Textarea", "Button", "Dialog"]
-    },
-    "leads_kanban": {
-      "instructions": "Drag-and-drop columns (New, Contacted, Proposal Sent, Negotiation, Won, Lost). Cards should display lead name, destination, and budget clearly.",
-      "components": ["Card", "Badge", "ScrollArea"]
-    },
-    "vendor_inventory": {
-      "instructions": "Data-dense tables for Hotels and Vehicles. Include sticky headers, inline editing (or click-to-edit modal), and status toggles.",
-      "components": ["Table", "Input", "Select", "Switch"]
-    },
-    "itinerary_builder": {
-      "instructions": "Vertical timeline layout for day-by-day plan. Live cost calculator fixed on the right side or bottom sticky bar.",
-      "components": ["Accordion", "Slider", "Checkbox", "Card"]
-    },
-    "bookings_invoices": {
-      "instructions": "Split view: list on left, details on right. Use progress bars for payment tracking (Advance/Balance).",
-      "components": ["Progress", "Table", "Sheet"]
-    }
+  "layouts": {
+    "hero": "A full-bleed min-h-[80vh] container. Top element: A simulated 'Header Banner' (e.g., a branded strip or mock image) dynamically injected per sector. The rest of the hero features the destination image with a subtle dark gradient overlay (bg-gradient-to-t from-black/70 via-black/20 to-transparent). Destination title positioned at the bottom-left, using text-5xl to text-7xl font-black text-white.",
+    "day_by_day_timeline": "A vertical spine layout. Each 'Day' block features a prominent but stylized day indicator (e.g., a large muted number '01' behind the text, or a sleek vertical line with a primary-colored dot). Next to the route description (rich HTML style), place a 2-to-3 image Bento grid for destinations/hotels (use varying aspect ratios like square and tall).",
+    "costing_and_policies": "Costing: A prominent, elegant 'Price Summary' card. Policies (Inclusions, Exclusions, Payment, Cancellation): Clean, minimalist Shadcn Accordions with border-b-only styling to mimic a sophisticated document.",
+    "sticky_action_bar": "Fixed to bottom-0 w-full. Mobile-friendly flex container housing 3 buttons: 'Accept Quote' (Primary, full-width or dominant), 'Download PDF' (Secondary/Outline, icon-only on very small screens), 'Chat on WhatsApp' (Green or Accent outline, icon + text). Use z-50 to hover above all content."
+  },
+  "components_to_use": {
+    "Accordion": "For all policies.",
+    "Card": "For price breakdown and sector branding blocks.",
+    "Button": "For all CTAs.",
+    "Badge": "For status or highlight tags."
   },
   "image_urls": [
     {
-      "category": "public_itinerary_hero",
-      "url": "https://images.unsplash.com/photo-1773393776477-61773dfc8a09?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHw0fHx0cmF2ZWwlMjBkZXN0aW5hdGlvbiUyMGx1eHVyeSUyMGhvdGVsJTIwc3Vuc2V0fGVufDB8fHx8MTc4Nzk5MTI2MHww&ixlib=rb-4.1.0&q=85",
-      "description": "Modern luxury hotel at sunset. Use for header image in the public shareable itinerary page."
+      "url": "https://images.unsplash.com/photo-1604223190546-a43e4c7f29d7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODh8MHwxfHNlYXJjaHwxfHxoaW1hbGF5YW4lMjBtb3VudGFpbiUyMGxhbmRzY2FwZSUyMHN1bnNldHxlbnwwfHx8fDE3ODc5OTkyMTh8MA&ixlib=rb-4.1.0&q=85",
+      "category": "hero",
+      "description": "Himalayan sunset mountain ridges - use as the main full-bleed hero background"
     },
     {
-      "category": "public_itinerary_destination",
-      "url": "https://images.unsplash.com/photo-1596003903067-bf5762ad5c19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwzfHxiZWF1dGlmdWwlMjBsYW5kc2NhcGUlMjBtb3VudGFpbiUyMGxha2V8ZW58MHx8fHwxNzg3OTkxMjYwfDA&ixlib=rb-4.1.0&q=85",
-      "description": "Beautiful mountain landscape. Use as an itinerary destination placeholder."
+      "url": "https://images.unsplash.com/photo-1780461968848-8550deafef91?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjByZXNvcnQlMjByb29tJTIwbW91bnRhaW4lMjB2aWV3fGVufDB8fHx8MTc4Nzk5OTIwOHww&ixlib=rb-4.1.0&q=85",
+      "category": "timeline_thumbnail",
+      "description": "Luxury resort room mountain view - use in Day 1 or Day 2 image grid"
     },
     {
-      "category": "user_avatar_female",
-      "url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4Nzk5MTI2MHww&ixlib=rb-4.1.0&q=85",
-      "description": "Professional headshot (female) for agent/admin avatars."
+      "url": "https://images.unsplash.com/photo-1772203228933-2d0f06bc36e7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwyfHxoaW1hbGF5YW4lMjBtb25hc3RlcnklMjBhcmNoaXRlY3R1cmV8ZW58MHx8fHwxNzg3OTk5MjA4fDA&ixlib=rb-4.1.0&q=85",
+      "category": "timeline_thumbnail",
+      "description": "Monastery built into a cliff face - use in cultural day itinerary"
     },
     {
-      "category": "user_avatar_male",
-      "url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4Nzk5MTI2MHww&ixlib=rb-4.1.0&q=85",
-      "description": "Professional headshot (male) for agent/admin avatars."
+      "url": "https://images.unsplash.com/photo-1674498260932-6f7d8eed6d9f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwxfHx0ZWElMjBnYXJkZW4lMjBsYW5kc2NhcGUlMjB3aWRlfGVufDB8fHx8MTc4Nzk5OTIxOHww&ixlib=rb-4.1.0&q=85",
+      "category": "timeline_thumbnail",
+      "description": "Field of tea plants - use in nature/tea garden day itinerary"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1554629947-334ff61d85dc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODh8MHwxfHNlYXJjaHwyfHxoaW1hbGF5YW4lMjBtb3VudGFpbiUyMGxhbmRzY2FwZSUyMHN1bnNldHxlbnwwfHx8fDE3ODc5OTkyMTh8MA&ixlib=rb-4.1.0&q=85",
+      "category": "header_footer_banner",
+      "description": "Ice-capped mountain - crop horizontally to use as the dynamic sector-specific header/footer branding banner"
     }
   ],
-  "accessibility": {
-    "contrast": "Ensure text has 4.5:1 ratio against backgrounds. Use text-shadow over images.",
-    "focus": "All interactive elements MUST have visible focus rings (`focus-visible:ring-2`).",
-    "motion": "Respect `prefers-reduced-motion`."
-  },
-  "testing": {
-    "instructions": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid=\"login-submit-button\"`, `data-testid=\"kanban-card-1\"`)."
-  },
-  "instructions_to_main_agent": [
-    "Prioritize Shadcn components in `src/components/ui/` heavily.",
-    "Use `.js` and `.jsx` extensions, NOT `.tsx`.",
-    "Do NOT use HTML-based defaults for Datepickers, Selects, or Dialogs. Use Shadcn equivalents.",
-    "Do NOT use `transparent` backgrounds for sticky headers or dropdown menus.",
-    "For toasts, use `sonner`.",
-    "Always apply hover, focus, and active states. Use `hover:text-white` when changing background to dark.",
-    "Do NOT center align dashboard layouts. Everything should be left-aligned naturally.",
-    "Inject the provided image URLs natively. NEVER use placeholder services like via.placeholder.com."
-  ],
   "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
-    "Avoid generic, 'on-distribution' AI slop outputs. Create distinctive frontends.",
-    "Do NOT apply universal transition (e.g., `transition: all`). Target specific properties.",
-    "Do NOT center align the app container (`.App { text-align: center; }`).",
-    "Never use AI emoji characters (🤖🧠💡) for icons. Use the approved icon library.",
-    "Create depth through layered design elements with z-index hierarchy."
-  ]
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Do not make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 for icons. Use lucide-react icons.",
+    "Every interaction needs micro-animations - hover states, transitions. Exclude transforms from universal transitions.",
+    "Do NOT apply a universal 'transition: all' rule.",
+    "DO NOT center align the app container (.App { text-align: center; }). This disrupts the human natural reading flow.",
+    "All interactive and key informational elements MUST include a data-testid attribute to facilitate robust automated testing. Example: data-testid='accept-quote-btn'",
+    "CRITICAL: Do not use a completely transparent background on sticky/floating elements. The sticky action bar MUST have a solid or blurred background."
+  ],
+  "instructions_to_main_agent": "Create a seamless, single-page scroll experience (magazine-style brochure) in App.js. Start with the sector Header Banner, then the Hero section. Use framer-motion to add subtle scroll fade-ins for the timeline days. Use lucide-react for all icons. The Sticky Action bar should be fixed at the bottom of the viewport. Ensure the typography adheres strictly to Outfit for headings and Inter for body text as configured in tailwind and CSS. Construct a 'mock' rich-text layout for the day descriptions alongside the bento-box image grids."
 }

@@ -250,6 +250,9 @@ class TestEndToEndFlow:
                 "meal_plan": "map", "vehicle_id": STATE["vehicle_id"], "activity_cost": 2000,
             }],
             "pricing": {"margin_pct": 25, "gst_enabled": True, "gst_pct": 5, "discount": 0},
+            "terms": {"inclusions": "<p>TEST inc</p>", "exclusions": "<p>TEST exc</p>",
+                      "payment_policy": "<p>TEST pay</p>", "cancellation_policy": "<p>TEST cxl</p>",
+                      "important_notes": "<p>TEST notes</p>"},
         }
 
     def test_preview_cost_math(self, admin):
@@ -395,7 +398,11 @@ class TestEndToEndFlow:
         adv, bal = inv["splits"]
         assert adv["amount"] == 4173.75 and "30" in adv["label"]
         assert bal["amount"] == 9738.75 and "70" in bal["label"]
-        assert bal["due_date"] == "2026-08-03"
+        # Balance due date is clamped to max(today, start_date - 7d) (round-2 fix)
+        from datetime import date as _date, timedelta as _td
+        expected_bal_due = max(_date.today(), _date.fromisoformat("2026-08-10") - _td(days=7)).isoformat()
+        assert bal["due_date"] == expected_bal_due
+        assert bal["due_date"] >= adv["due_date"]
         STATE["invoice_id"] = inv["id"]
         STATE["advance"] = adv["amount"]
 
@@ -444,6 +451,8 @@ class TestEndToEndFlow:
 
     def test_send_proposal_to_sink(self, admin):
         r = admin.post(f"{API}/email/send", json={"template": "proposal", "ref_id": STATE["itin_id"]}, timeout=90)
+        if r.status_code == 429:
+            pytest.skip("managed Resend provider rate limit (429) - not an app defect")
         assert r.status_code == 200, r.text
         d = r.json()
         assert d["status"] == "success" and d["to"] == "delivered@resend.dev"
@@ -453,6 +462,8 @@ class TestEndToEndFlow:
         'Undeliverable recipient' and the API surfaces it as 502."""
         time.sleep(1)
         r = admin.post(f"{API}/email/send", json={"template": "vendor_request", "ref_id": STATE["booking_id"], "vendor_id": STATE["conf_hotel"]}, timeout=90)
+        if r.status_code == 429:
+            pytest.skip("managed Resend provider rate limit (429) - not an app defect")
         assert r.status_code == 200, f"vendor_request email send failed ({r.status_code}) - seed vendor email domain undeliverable"
 
     def test_send_vendor_request_with_deliverable_email(self, admin, ops):
@@ -473,6 +484,8 @@ class TestEndToEndFlow:
     def test_send_receipt(self, finance):
         time.sleep(1)
         r = finance.post(f"{API}/email/send", json={"template": "receipt", "ref_id": STATE["invoice_id"]}, timeout=90)
+        if r.status_code == 429:
+            pytest.skip("managed Resend provider rate limit (429) - not an app defect")
         assert r.status_code == 200, r.text
 
     def test_unknown_template(self, admin):

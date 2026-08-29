@@ -27,7 +27,18 @@ Production-ready Travel CRM web app with: Omni-Channel Sharing Engine (one-click
 - Dashboard KPIs (pipeline value, revenue, collected, outstanding, profit, pending vendor confirms) + upcoming departures + recent leads
 - Team/user management (admin)
 
+## Implemented (2026-08-29, round 2 — fixes)
+- Email provider error propagation + visible error states; deliverable seed vendor emails; X-Forwarded-For brute-force keying; anchor-based WhatsApp CTAs; itinerary cascade delete; payment prefill/over-payment guard; invoice auto-select; due-date clamping
+
+## Implemented (2026-08-29, round 3 — enhancements)
+- Dynamic Route Master (CRUD + lookup): per-day From/To selects auto-fetch rich default route descriptions into a WYSIWYG editor (RichTextEditor, contentEditable toolbar)
+- Advanced Hotel Costing Matrix: rooms carry CP/MAP/AP double base + single occupancy + Extra Bed (adult) + CWB + CNB; auto-costing factors headcount (adults/CWB/CNB): pairs × double + odd adult extra bed + children add-ons; per-person over total travellers
+- Terms & Policies master (Settings): rich-text templates; mandatory 5-block terms section in builder (enforced client + server side); template loader; privacy disclaimer on lead form (exact copy)
+- Sector-specific branding: admin uploads header/footer banners per sector (base64, validated server-side); share view auto-injects by destination/sector match
+- Premium magazine-style guest view /share/:token: sector banner, full-bleed hero (route image preferred), editorial timeline with image grids + rich text, pricing card, policies accordions, sticky mobile action bar (Accept Quote → accepted + lead won; Download PDF via print; Chat on WhatsApp to company number)
+- Company WhatsApp setting; bleach-based HTML sanitization at write + share time (XSS protection)
+
 ## Backlog
 - P0: (none pending)
-- P1: WhatsApp Business Cloud API interactive messages (needs Meta credentials); true PDF generation via @react-pdf/renderer (currently print-to-PDF); editable email body composer (blocked by managed-email G4 guardrails — currently fixed templates)
-- P2: Lead assignment to agents, activity timeline per lead, multi-currency, booking calendar view, password-reset UI (backend endpoints exist), shadcn Calendar date pickers (currently native date inputs), booking/invoice re-sync when a linked itinerary is edited (currently snapshot at creation)
+- P1: WhatsApp Business Cloud API interactive messages (needs Meta credentials); true PDF generation via @react-pdf/renderer (currently print-to-PDF); editable email body composer (blocked by managed-email G4 guardrails — currently fixed templates); move branding banners to object storage (currently base64 in Mongo)
+- P2: Lead assignment to agents, activity timeline per lead, multi-currency, booking calendar view, password-reset UI (backend endpoints exist), shadcn Calendar date pickers (currently native date inputs), booking/invoice re-sync when a linked itinerary is edited (currently snapshot at creation), migrate RichTextEditor to Tiptap/Lexical

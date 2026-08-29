@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from auth import get_current_user, require_roles
 from database import db
+from htmlutil import sanitize_html
+from settings_routes import get_company, match_branding
 
 router = APIRouter(prefix="/api/itineraries", tags=["itineraries"])
 share_router = APIRouter(prefix="/api/share", tags=["share"])
@@ -34,6 +36,12 @@ async def compute_costing(payload: dict) -> dict:
             start = None
     hotel_cost = transport_cost = activity_cost = 0.0
     hotel_cache, vehicle_cache = {}, {}
+    raw_adults = payload.get("adults")
+    adults = int(raw_adults) if raw_adults not in (None, "") else int(payload.get("pax") or 2)
+    cwb_n = int(payload.get("cwb") or 0)
+    cnb_n = int(payload.get("cnb") or 0)
+    if adults < 1 or cwb_n < 0 or cnb_n < 0:
+        raise HTTPException(status_code=400, detail="Invalid headcount: adults must be at least 1, children counts cannot be negative")
     for d in days:
         day_date = start + timedelta(days=int(d.get("day", 1)) - 1) if start else None
         hid = d.get("hotel_id") or ""
@@ -44,7 +52,13 @@ async def compute_costing(payload: dict) -> dict:
             if hotel:
                 room = next((r for r in hotel.get("rooms", []) if r.get("category") == d.get("room_category")), None)
                 if room:
-                    rate = _f(room.get(d.get("meal_plan") or "cp"))
+                    double_rate = _f(room.get(d.get("meal_plan") or "cp"))
+                    pairs, rem = divmod(max(adults, 1), 2)
+                    if adults <= 1:
+                        occ = _f(room.get("single_rate")) or double_rate
+                    else:
+                        occ = pairs * double_rate + (_f(room.get("extra_bed_adult")) if rem else 0)
+                    occ += cwb_n * _f(room.get("cwb")) + cnb_n * _f(room.get("cnb"))
                     mult = 1.0
                     for s in hotel.get("seasons", []):
                         try:
@@ -52,7 +66,7 @@ async def compute_costing(payload: dict) -> dict:
                                 mult = max(mult, 1 + _f(s.get("surcharge_pct")) / 100)
                         except (ValueError, KeyError):
                             continue
-                    hotel_cost += rate * mult
+                    hotel_cost += occ * mult
         vid = d.get("vehicle_id") or ""
         if vid:
             if vid not in vehicle_cache:
@@ -68,7 +82,7 @@ async def compute_costing(payload: dict) -> dict:
     subtotal = max(base + margin - discount, 0)
     tax = subtotal * _f(pricing.get("gst_pct", 5)) / 100 if pricing.get("gst_enabled", True) else 0.0
     total = subtotal + tax
-    pax = max(int(payload.get("pax") or 2), 1)
+    travellers = max(adults + cwb_n + cnb_n, 1)
     r = lambda x: round(x, 2)
     return {
         "hotel_cost": r(hotel_cost),
@@ -80,11 +94,29 @@ async def compute_costing(payload: dict) -> dict:
         "subtotal": r(subtotal),
         "tax_amount": r(tax),
         "total": r(total),
-        "per_person": r(total / pax),
+        "per_person": r(total / travellers),
     }
 
 
-FIELDS = {"title", "customer_name", "customer_email", "customer_phone", "destination", "start_date", "pax", "days", "pricing", "lead_id", "notes"}
+FIELDS = {"title", "customer_name", "customer_email", "customer_phone", "destination", "start_date", "pax", "adults", "cwb", "cnb", "days", "pricing", "lead_id", "notes", "terms"}
+
+TERM_KEYS = ("inclusions", "exclusions", "payment_policy", "cancellation_policy", "important_notes")
+
+
+def sanitize_payload(doc: dict) -> dict:
+    for d in doc.get("days") or []:
+        d["description"] = sanitize_html(d.get("description", ""))
+    if "terms" in doc:
+        terms = doc.get("terms") or {}
+        doc["terms"] = {k: sanitize_html(terms.get(k, "")) for k in TERM_KEYS}
+    return doc
+
+
+def validate_terms(doc: dict):
+    terms = doc.get("terms") or {}
+    missing = [k.replace("_", " ") for k in TERM_KEYS if not sanitize_html(terms.get(k, "")).replace("<br>", "").strip()]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Terms section is mandatory — missing: {', '.join(missing)}")
 
 
 @router.get("")
@@ -107,6 +139,8 @@ async def create_itinerary(payload: dict, user: dict = Depends(require_roles("ad
         doc["title"] = f"{doc.get('destination', 'Trip')} — {doc.get('customer_name', 'Customer')}"
     doc.setdefault("days", [])
     doc.setdefault("pricing", {"margin_pct": 25, "gst_enabled": True, "gst_pct": 5, "discount": 0})
+    doc = sanitize_payload(doc)
+    validate_terms(doc)
     for i, d in enumerate(doc["days"]):
         d["day"] = i + 1
     doc.update(
@@ -138,8 +172,11 @@ async def update_itinerary(itin_id: str, payload: dict, user: dict = Depends(req
         raise HTTPException(status_code=404, detail="Itinerary not found")
     updates = {k: v for k, v in payload.items() if k in FIELDS}
     merged = {**itin, **updates}
+    merged = sanitize_payload(merged)
+    validate_terms(merged)
     for i, d in enumerate(merged.get("days", [])):
         d["day"] = i + 1
+    updates = {k: merged[k] for k in updates}
     updates["costing"] = await compute_costing(merged)
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.itineraries.update_one({"id": itin_id}, {"$set": updates})
@@ -187,19 +224,35 @@ async def _resolve_day(day: dict) -> dict:
         "title": day.get("title", ""),
         "description": day.get("description", ""),
         "activities": day.get("activities", ""),
+        "from_place": day.get("from_place", ""),
+        "to_place": day.get("to_place", ""),
         "hotel_name": "",
         "room_category": day.get("room_category", ""),
         "meal_plan": MEAL_LABELS.get(day.get("meal_plan"), ""),
         "vehicle_label": "",
+        "images": [],
     }
+    if day.get("from_place") and day.get("to_place"):
+        route = await db.routes.find_one(
+            {
+                "from_place": {"$regex": f"^{day['from_place']}$", "$options": "i"},
+                "to_place": {"$regex": f"^{day['to_place']}$", "$options": "i"},
+            },
+            {"_id": 0},
+        )
+        if route and route.get("image_url"):
+            out["images"].append(route["image_url"])
     if day.get("hotel_id"):
         hotel = await db.hotels.find_one({"id": day["hotel_id"]}, {"_id": 0})
         if hotel:
             out["hotel_name"] = hotel.get("name", "")
+            if hotel.get("image_url"):
+                out["images"].append(hotel["image_url"])
     if day.get("vehicle_id"):
         vehicle = await db.vehicles.find_one({"id": day["vehicle_id"]}, {"_id": 0})
         if vehicle:
             out["vehicle_label"] = f"{vehicle.get('vehicle_type', '')} — {vehicle.get('vendor_name', '')}"
+    out["description"] = sanitize_html(out["description"])
     return out
 
 
@@ -210,14 +263,39 @@ async def public_share(token: str):
         raise HTTPException(status_code=404, detail="Proposal not found")
     days = [await _resolve_day(d) for d in itin.get("days", [])]
     c = itin.get("costing", {})
+    branding = await match_branding(itin.get("destination", ""))
+    company = await get_company()
+    hero_image = next((img for d in days for img in d.get("images", [])), "")
     return {
         "title": itin.get("title", ""),
         "customer_name": itin.get("customer_name", ""),
         "destination": itin.get("destination", ""),
         "start_date": itin.get("start_date", ""),
         "pax": itin.get("pax", 2),
+        "adults": itin.get("adults") or itin.get("pax", 2),
+        "cwb": itin.get("cwb", 0),
+        "cnb": itin.get("cnb", 0),
         "days": days,
         "total": c.get("total", 0),
         "per_person": c.get("per_person", 0),
+        "terms": {k: sanitize_html(v) for k, v in (itin.get("terms") or {}).items()},
+        "accepted": itin.get("accepted", False),
+        "header_banner": branding.get("header_banner", ""),
+        "footer_banner": branding.get("footer_banner", ""),
+        "sector": branding.get("sector", ""),
+        "hero_image": hero_image,
+        "company_whatsapp": company.get("whatsapp", ""),
         "brand": "Thapa Holidays",
     }
+
+
+@share_router.post("/{token}/accept")
+async def accept_quote(token: str):
+    itin = await db.itineraries.find_one({"share_token": token})
+    if not itin:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.itineraries.update_one({"id": itin["id"]}, {"$set": {"accepted": True, "accepted_at": now}})
+    if itin.get("lead_id"):
+        await db.leads.update_one({"id": itin["lead_id"]}, {"$set": {"status": "won", "updated_at": now}})
+    return {"status": "accepted"}

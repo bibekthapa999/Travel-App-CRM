@@ -59,6 +59,9 @@ def _itin_payload(vendor_ids):
             "meal_plan": "map", "vehicle_id": vendor_ids["vehicle_id"], "activity_cost": 2000,
         }],
         "pricing": {"margin_pct": 25, "gst_enabled": True, "gst_pct": 5, "discount": 0},
+        "terms": {"inclusions": "<p>TEST inc</p>", "exclusions": "<p>TEST exc</p>",
+                  "payment_policy": "<p>TEST pay</p>", "cancellation_policy": "<p>TEST cxl</p>",
+                  "important_notes": "<p>TEST notes</p>"},
     }
 
 

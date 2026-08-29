@@ -12,6 +12,7 @@ import ItineraryBuilder from "@/pages/ItineraryBuilder";
 import Bookings from "@/pages/Bookings";
 import Invoices from "@/pages/Invoices";
 import Users from "@/pages/Users";
+import Settings from "@/pages/Settings";
 import SharedItinerary from "@/pages/SharedItinerary";
 import { Loader2 } from "lucide-react";
 
@@ -53,6 +54,7 @@ function App() {
               <Route path="/bookings" element={<Protected roles={["admin", "sales", "operations"]}><Bookings /></Protected>} />
               <Route path="/invoices" element={<Protected roles={["admin", "finance"]}><Invoices /></Protected>} />
               <Route path="/users" element={<Protected roles={["admin"]}><Users /></Protected>} />
+              <Route path="/settings" element={<Protected roles={["admin"]}><Settings /></Protected>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -18,11 +18,12 @@ from emailer import email_router
 from invoices import router as invoices_router
 from itineraries import router as itineraries_router, share_router
 from leads import router as leads_router
+from settings_routes import routes_router, settings_router
 from vendors import hotels_router, vehicles_router
 
 app = FastAPI()
 
-for r in (auth_router, users_router, email_router, leads_router, hotels_router, vehicles_router, itineraries_router, share_router, bookings_router, invoices_router, dashboard_router):
+for r in (auth_router, users_router, email_router, leads_router, hotels_router, vehicles_router, itineraries_router, share_router, bookings_router, invoices_router, dashboard_router, routes_router, settings_router):
     app.include_router(r)
 
 app.add_middleware(
@@ -70,9 +71,10 @@ async def seed_inventory():
                 "id": str(uuid.uuid4()), "name": "Hotel Himalayan View", "destination": "Manali", "star": 4,
                 "contact_name": "Ramesh Kumar", "phone": "919816012345", "email": "delivered+hotel-himalayan@resend.dev",
                 "rooms": [
-                    {"category": "Deluxe", "cp": 3500, "map": 4200, "ap": 4800},
-                    {"category": "Premium Valley View", "cp": 5200, "map": 6000, "ap": 6800},
+                    {"category": "Deluxe", "cp": 3500, "map": 4200, "ap": 4800, "single_rate": 2800, "extra_bed_adult": 1200, "cwb": 900, "cnb": 400},
+                    {"category": "Premium Valley View", "cp": 5200, "map": 6000, "ap": 6800, "single_rate": 4200, "extra_bed_adult": 1500, "cwb": 1100, "cnb": 500},
                 ],
+                "image_url": "https://images.unsplash.com/photo-1779547011126-c646b7de93b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
                 "seasons": [{"label": "Peak Winter", "start": "2025-12-20", "end": "2026-01-10", "surcharge_pct": 25}],
                 "active": True, "created_at": datetime.now(timezone.utc).isoformat(),
             },
@@ -80,16 +82,18 @@ async def seed_inventory():
                 "id": str(uuid.uuid4()), "name": "Goa Palms Beach Resort", "destination": "Goa", "star": 4,
                 "contact_name": "Maria D'Souza", "phone": "919822045678", "email": "delivered+hotel-goapalms@resend.dev",
                 "rooms": [
-                    {"category": "Deluxe Garden View", "cp": 4200, "map": 5000, "ap": 5800},
-                    {"category": "Sea View Suite", "cp": 7500, "map": 8500, "ap": 9500},
+                    {"category": "Deluxe Garden View", "cp": 4200, "map": 5000, "ap": 5800, "single_rate": 3400, "extra_bed_adult": 1400, "cwb": 1000, "cnb": 500},
+                    {"category": "Sea View Suite", "cp": 7500, "map": 8500, "ap": 9500, "single_rate": 6000, "extra_bed_adult": 1800, "cwb": 1300, "cnb": 600},
                 ],
+                "image_url": "https://images.unsplash.com/photo-1718359759373-1b2670b7478b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
                 "seasons": [{"label": "New Year Rush", "start": "2025-12-24", "end": "2026-01-05", "surcharge_pct": 40}],
                 "active": True, "created_at": datetime.now(timezone.utc).isoformat(),
             },
             {
                 "id": str(uuid.uuid4()), "name": "Jaipur Heritage Haveli", "destination": "Jaipur", "star": 3,
                 "contact_name": "Vikram Singh", "phone": "919829078901", "email": "delivered+hotel-jaipur@resend.dev",
-                "rooms": [{"category": "Royal Deluxe", "cp": 2800, "map": 3400, "ap": 3900}],
+                "rooms": [{"category": "Royal Deluxe", "cp": 2800, "map": 3400, "ap": 3900, "single_rate": 2200, "extra_bed_adult": 900, "cwb": 700, "cnb": 300}],
+                "image_url": "https://images.unsplash.com/photo-1595161695996-f746349f4945?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
                 "seasons": [],
                 "active": True, "created_at": datetime.now(timezone.utc).isoformat(),
             },
@@ -108,6 +112,70 @@ async def seed_inventory():
         ])
 
 
+async def seed_extras():
+    now = datetime.now(timezone.utc).isoformat()
+    if await db.routes.count_documents({}) == 0:
+        await db.routes.insert_many([
+            {
+                "id": str(uuid.uuid4()), "from_place": "IXB/NJP", "to_place": "Gangtok",
+                "image_url": "https://images.unsplash.com/photo-1724600458551-7144f78ec0c0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwxfHxHYW5ndG9rJTIwU2lra2ltJTIwbW91bnRhaW5zJTIwbW9uYXN0ZXJ5fGVufDB8fHx8MTc4Nzk5OTI3Mnww&ixlib=rb-4.1.0&q=85",
+                "description": "<p>Upon arrival at <strong>IXB Airport / NJP Railway Station</strong>, you will be warmly received by our representative and driven through the emerald corridors of the Teesta valley towards <strong>Gangtok</strong> (approx. 125 km / 4.5 hrs). Watch the landscape transform from lush subtropical forests to crisp Himalayan ridges as you ascend. On arrival, check in to your hotel and unwind. The evening is free to stroll along the famous <em>MG Marg</em>, Gangtok's charming pedestrian promenade lined with cafes and local boutiques.</p>",
+                "created_at": now,
+            },
+            {
+                "id": str(uuid.uuid4()), "from_place": "NJP/IXB", "to_place": "Darjeeling",
+                "image_url": "https://images.unsplash.com/photo-1661970072086-b7b1c3d7c787?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwxfHxEYXJqZWVsaW5nJTIwdGVhJTIwZ2FyZGVuJTIwaGlsbHN8ZW58MHx8fHwxNzg3OTk5MjcxMA&ixlib=rb-4.1.0&q=85",
+                "description": "<p>Meet our driver at <strong>NJP / IXB</strong> and begin your scenic ascent to the Queen of the Hills, <strong>Darjeeling</strong> (approx. 75 km / 3 hrs). The route winds past rolling tea gardens, misty ridgelines and quaint hill hamlets. Check in to your hotel and spend the evening at <em>Chowrasta</em>, the lively mall square with sweeping views of the Kanchenjunga range.</p>",
+                "created_at": now,
+            },
+            {
+                "id": str(uuid.uuid4()), "from_place": "Phuentsholing", "to_place": "Thimphu",
+                "image_url": "https://images.unsplash.com/photo-1772203228933-2d0f06bc36e7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzR8MHwxfHNlYXJjaHwyfHxCaHV0YW4lMjB0aWdlciUyMG5lc3QlMjBtb25hc3Rlcnl8ZW58MHx8fHwxNzg3OTk5MjcyfDA&ixlib=rb-4.1.0&q=85",
+                "description": "<p>After completing border formalities at <strong>Phuentsholing</strong>, drive into the Kingdom of Bhutan towards the capital <strong>Thimphu</strong> (approx. 165 km / 5 hrs). The mountain highway follows the Wang Chhu river past waterfalls, prayer-flag-draped bridges and terraced farms. Check in and take an evening walk through Thimphu's craft bazaars and the clock tower square.</p>",
+                "created_at": now,
+            },
+        ])
+    if await db.terms_templates.count_documents({}) == 0:
+        await db.terms_templates.insert_one({
+            "id": str(uuid.uuid4()),
+            "name": "Standard Domestic Tour",
+            "inclusions": "<ul><li>Accommodation in the listed hotels on the selected meal plan</li><li>All transfers & sightseeing by private vehicle as per itinerary</li><li>Driver allowance, tolls, parking and fuel</li><li>All applicable hotel taxes</li></ul>",
+            "exclusions": "<ul><li>Airfare / train tickets unless mentioned</li><li>Entry fees, guide charges, camera fees and adventure activities</li><li>Personal expenses: laundry, tips, beverages, room service</li><li>Anything not explicitly mentioned under Inclusions</li></ul>",
+            "payment_policy": "<p><strong>30% advance</strong> at the time of booking confirmation. <strong>Balance 70%</strong> payable at least 7 days before the travel start date. Bookings made within 7 days of travel require 100% payment.</p>",
+            "cancellation_policy": "<ul><li>30+ days before travel: 10% of package cost</li><li>15–29 days: 30% of package cost</li><li>7–14 days: 50% of package cost</li><li>Under 7 days / no-show: 100% of package cost</li></ul>",
+            "important_notes": "<ul><li>Hotels are subject to availability at the time of confirmation; equivalent alternatives may be offered.</li><li>Valid government photo ID is mandatory for all travellers.</li><li>Your data will be used in a professional manner and will not be disclosed to any third party.</li></ul>",
+            "created_at": now,
+        })
+    if not await db.settings.find_one({"_id": "company"}):
+        await db.settings.insert_one({"_id": "company", "whatsapp": "919876543210"})
+
+
+async def fix_hotel_matrix():
+    matrix = {
+        "Hotel Himalayan View": {
+            "image_url": "https://images.unsplash.com/photo-1779547011126-c646b7de93b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
+            "rooms": {"Deluxe": {"single_rate": 2800, "extra_bed_adult": 1200, "cwb": 900, "cnb": 400}, "Premium Valley View": {"single_rate": 4200, "extra_bed_adult": 1500, "cwb": 1100, "cnb": 500}},
+        },
+        "Goa Palms Beach Resort": {
+            "image_url": "https://images.unsplash.com/photo-1718359759373-1b2670b7478b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
+            "rooms": {"Deluxe Garden View": {"single_rate": 3400, "extra_bed_adult": 1400, "cwb": 1000, "cnb": 500}, "Sea View Suite": {"single_rate": 6000, "extra_bed_adult": 1800, "cwb": 1300, "cnb": 600}},
+        },
+        "Jaipur Heritage Haveli": {
+            "image_url": "https://images.unsplash.com/photo-1595161695996-f746349f4945?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBtb3VudGFpbiUyMGhvdGVsJTIwcmVzb3J0JTIwcm9vbXxlbnwwfHx8fDE3ODc5OTkyNzJ8MA&ixlib=rb-4.1.0&q=85",
+            "rooms": {"Royal Deluxe": {"single_rate": 2200, "extra_bed_adult": 900, "cwb": 700, "cnb": 300}},
+        },
+    }
+    for name, fx in matrix.items():
+        hotel = await db.hotels.find_one({"name": name})
+        if not hotel:
+            continue
+        rooms = hotel.get("rooms", [])
+        for r in rooms:
+            for k, v in fx["rooms"].get(r.get("category"), {}).items():
+                r.setdefault(k, v)
+        await db.hotels.update_one({"id": hotel["id"]}, {"$set": {"rooms": rooms, "image_url": fx["image_url"]}})
+
+
 @app.on_event("startup")
 async def startup():
     await db.users.create_index("email", unique=True)
@@ -116,6 +184,8 @@ async def startup():
     await db.itineraries.create_index("share_token", unique=True)
     await seed_users()
     await seed_inventory()
+    await seed_extras()
+    await fix_hotel_matrix()
     vendor_email_fixups = {
         "Hotel Himalayan View": "delivered+hotel-himalayan@resend.dev",
         "Goa Palms Beach Resort": "delivered+hotel-goapalms@resend.dev",

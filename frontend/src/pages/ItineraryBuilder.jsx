@@ -4,6 +4,7 @@ import { BedDouble, Bus, Loader2, Plus, Save, Sparkles, Trash2 } from "lucide-re
 import { toast } from "sonner";
 import api, { apiError } from "@/lib/api";
 import { inr } from "@/lib/format";
+import RichTextEditor from "@/components/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,8 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const EMPTY_DAY = () => ({ day: 1, title: "", description: "", hotel_id: "", room_category: "", meal_plan: "cp", vehicle_id: "", activities: "", activity_cost: "" });
+const EMPTY_DAY = () => ({ day: 1, title: "", from_place: "", to_place: "", description: "", hotel_id: "", room_category: "", meal_plan: "cp", vehicle_id: "", activities: "", activity_cost: "" });
+const EMPTY_TERMS = { inclusions: "", exclusions: "", payment_policy: "", cancellation_policy: "", important_notes: "" };
 
 export default function ItineraryBuilder() {
   const { id } = useParams();
@@ -25,9 +27,12 @@ export default function ItineraryBuilder() {
   const [vehicles, setVehicles] = useState([]);
   const [form, setForm] = useState({
     title: "", customer_name: "", customer_email: "", customer_phone: "",
-    destination: "", start_date: "", pax: 2, lead_id: "", notes: "",
+    destination: "", start_date: "", pax: 2, adults: 2, cwb: 0, cnb: 0, lead_id: "", notes: "",
     days: [EMPTY_DAY()], pricing: { margin_pct: 25, gst_enabled: true, gst_pct: 5, discount: 0 },
+    terms: { ...EMPTY_TERMS },
   });
+  const [routes, setRoutes] = useState([]);
+  const [termsTemplates, setTermsTemplates] = useState([]);
   const [costing, setCosting] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
@@ -36,15 +41,19 @@ export default function ItineraryBuilder() {
   useEffect(() => {
     api.get("/hotels").then((r) => setHotels(r.data)).catch(() => {});
     api.get("/vehicles").then((r) => setVehicles(r.data)).catch(() => {});
+    api.get("/routes").then((r) => setRoutes(r.data)).catch(() => {});
+    api.get("/settings/terms").then((r) => setTermsTemplates(r.data)).catch(() => {});
     if (isEdit) {
       api.get(`/itineraries/${id}`).then((r) => {
         const d = r.data;
         setForm({
           title: d.title || "", customer_name: d.customer_name || "", customer_email: d.customer_email || "",
           customer_phone: d.customer_phone || "", destination: d.destination || "", start_date: d.start_date || "",
-          pax: d.pax || 2, lead_id: d.lead_id || "", notes: d.notes || "",
+          pax: d.pax || 2, adults: d.adults || d.pax || 2, cwb: d.cwb || 0, cnb: d.cnb || 0,
+          lead_id: d.lead_id || "", notes: d.notes || "",
           days: d.days?.length ? d.days : [EMPTY_DAY()],
           pricing: { margin_pct: 25, gst_enabled: true, gst_pct: 5, discount: 0, ...(d.pricing || {}) },
+          terms: { ...EMPTY_TERMS, ...(d.terms || {}) },
         });
         setCosting(d.costing || null);
         setLoading(false);
@@ -57,7 +66,7 @@ export default function ItineraryBuilder() {
           setForm((f) => ({
             ...f, lead_id: l.id, customer_name: l.customer_name, customer_email: l.email || "",
             customer_phone: l.phone || "", destination: l.destination || "", start_date: l.travel_start || "",
-            pax: l.pax || 2, title: `${l.destination || "Trip"} — ${l.customer_name}`,
+            pax: l.pax || 2, adults: l.adults || l.pax || 2, cwb: l.cwb || 0, cnb: l.cnb || 0, title: `${l.destination || "Trip"} — ${l.customer_name}`,
           }));
         }).catch(() => {});
       }
@@ -83,9 +92,32 @@ export default function ItineraryBuilder() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const setDay = (i, k, v) => setForm((f) => { const days = [...f.days]; days[i] = { ...days[i], [k]: v }; return { ...f, days }; });
   const setPricing = (k, v) => setForm((f) => ({ ...f, pricing: { ...f.pricing, [k]: v } }));
+  const setTerm = (k, v) => setForm((f) => ({ ...f, terms: { ...f.terms, [k]: v } }));
+
+  const routeFroms = [...new Set(routes.map((r) => r.from_place))];
+  const routeTos = (from) => [...new Set(routes.filter((r) => !from || r.from_place === from).map((r) => r.to_place))];
+
+  const fetchRouteDesc = async (i, from, to) => {
+    if (!from || !to) return;
+    try {
+      const { data } = await api.get("/routes/lookup", { params: { from_place: from, to_place: to } });
+      if (data.found) {
+        setDay(i, "description", data.description);
+        toast.success("Route description auto-loaded — tweak it below");
+      }
+    } catch { /* no route master match */ }
+  };
+
+  const setRoutePoint = (i, key, value) => {
+    const day = { ...form.days[i], [key]: value };
+    setDay(i, key, value);
+    fetchRouteDesc(i, key === "from_place" ? value : day.from_place, key === "to_place" ? value : day.to_place);
+  };
 
   const save = async () => {
     if (!form.customer_name.trim()) return toast.error("Customer name is required");
+    const missing = Object.entries(form.terms).filter(([, v]) => !v || !v.replace(/<[^>]+>/g, "").trim()).map(([k]) => k.replace(/_/g, " "));
+    if (missing.length) return toast.error(`Terms section is mandatory — missing: ${missing.join(", ")}`);
     setSaving(true);
     try {
       if (isEdit) await api.patch(`/itineraries/${id}`, payload);
@@ -119,6 +151,9 @@ export default function ItineraryBuilder() {
             <div className="space-y-1.5"><Label>Customer WhatsApp</Label><Input value={form.customer_phone} onChange={set("customer_phone")} data-testid="itin-phone-input" /></div>
             <div className="space-y-1.5"><Label>Start date</Label><Input type="date" value={form.start_date} onChange={set("start_date")} data-testid="itin-start-input" /></div>
             <div className="space-y-1.5"><Label>Travellers (pax)</Label><Input type="number" min="1" value={form.pax} onChange={set("pax")} data-testid="itin-pax-input" /></div>
+            <div className="space-y-1.5"><Label>Adults</Label><Input type="number" min="1" value={form.adults} onChange={set("adults")} data-testid="itin-adults-input" /></div>
+            <div className="space-y-1.5"><Label>Child with bed (CWB)</Label><Input type="number" min="0" value={form.cwb} onChange={set("cwb")} data-testid="itin-cwb-input" /></div>
+            <div className="space-y-1.5"><Label>Child no bed (CNB)</Label><Input type="number" min="0" value={form.cnb} onChange={set("cnb")} data-testid="itin-cnb-input" /></div>
           </CardContent>
         </Card>
 
@@ -143,6 +178,28 @@ export default function ItineraryBuilder() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5"><Label>Day title</Label><Input value={d.title} onChange={(e) => setDay(i, "title", e.target.value)} placeholder="Arrival & local sightseeing" data-testid={`day-title-${i + 1}`} /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label>From</Label>
+                      <Select value={d.from_place || "none"} onValueChange={(v) => setRoutePoint(i, "from_place", v === "none" ? "" : v)}>
+                        <SelectTrigger data-testid={`day-from-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select</SelectItem>
+                          {routeFroms.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>To</Label>
+                      <Select value={d.to_place || "none"} onValueChange={(v) => setRoutePoint(i, "to_place", v === "none" ? "" : v)}>
+                        <SelectTrigger data-testid={`day-to-${i + 1}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select</SelectItem>
+                          {routeTos(d.from_place).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" /> Hotel</Label>
                     <Select value={d.hotel_id || "none"} onValueChange={(v) => setForm((f) => { const days = [...f.days]; days[i] = { ...days[i], hotel_id: v === "none" ? "" : v, room_category: "" }; return { ...f, days }; })}>
@@ -190,12 +247,44 @@ export default function ItineraryBuilder() {
                   </div>
                   <div className="space-y-1.5"><Label>Activity cost (₹)</Label><Input type="number" min="0" value={d.activity_cost} onChange={(e) => setDay(i, "activity_cost", e.target.value)} data-testid={`day-activity-cost-${i + 1}`} /></div>
                   <div className="space-y-1.5 sm:col-span-2"><Label>Activities / notes</Label><Textarea rows={2} value={d.activities} onChange={(e) => setDay(i, "activities", e.target.value)} placeholder="Solang Valley visit, paragliding, mall road…" data-testid={`day-activities-${i + 1}`} /></div>
-                  <div className="space-y-1.5 sm:col-span-2"><Label>Day description (shown on proposal)</Label><Textarea rows={2} value={d.description} onChange={(e) => setDay(i, "description", e.target.value)} data-testid={`day-desc-${i + 1}`} /></div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Day description (rich text, shown on proposal)</Label>
+                    <RichTextEditor value={d.description} onChange={(v) => setDay(i, "description", v)} testid={`day-desc-${i + 1}`} placeholder="Select From & To above to auto-load the route description, or write your own…" />
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+
+        <Card data-testid="terms-section">
+          <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+            <CardTitle className="font-heading text-lg">Policies & Terms <span className="text-destructive">*</span></CardTitle>
+            <Select value="" onValueChange={(v) => {
+              const t = termsTemplates.find((x) => x.id === v);
+              if (t) {
+                setForm((f) => ({ ...f, terms: { inclusions: t.inclusions, exclusions: t.exclusions, payment_policy: t.payment_policy, cancellation_policy: t.cancellation_policy, important_notes: t.important_notes } }));
+                toast.success(`Template "${t.name}" loaded — edit freely`);
+              }
+            }}>
+              <SelectTrigger className="w-56" data-testid="terms-template-select"><SelectValue placeholder="Load a template…" /></SelectTrigger>
+              <SelectContent>
+                {termsTemplates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              ["inclusions", "Inclusions"], ["exclusions", "Exclusions"], ["payment_policy", "Payment Policy"],
+              ["cancellation_policy", "Cancellation Policy"], ["important_notes", "Important Notes"],
+            ].map(([key, label]) => (
+              <div key={key} className="space-y-1.5">
+                <Label>{label} <span className="text-destructive">*</span></Label>
+                <RichTextEditor value={form.terms[key]} onChange={(v) => setTerm(key, v)} testid={`itin-terms-${key}`} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="xl:sticky xl:top-6" data-testid="cost-calculator">

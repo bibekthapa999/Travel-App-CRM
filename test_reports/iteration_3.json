@@ -1,0 +1,96 @@
+{
+  "summary": "Round-3 full-stack verification of Route Master, occupancy hotel-costing matrix, Terms & Policies master, sector branding and the magazine guest share view. BACKEND: added /app/backend/tests/test_round3_features.py (29 new cases) covering GET/POST/PATCH/DELETE /api/routes + /api/routes/lookup (rich HTML 'Teesta valley' returned, 400 on missing params, 403 for finance, 401 unauthenticated, 404 on unknown patch), /api/settings/terms CRUD + seeded 'Standard Domestic Tour', /api/settings/company GET/PUT (digit normalisation '+91 98765-00001' -> 919876500001, 403 for sales), /api/settings/branding create/upsert-by-sector(case-insensitive)/delete + 400 on empty sector, occupancy costing math (3A+1CWB Deluxe MAP = 4200+1200+900 = 6300 -> total 8268.75; 2A = 4200 -> 5512.5; 1A uses single_rate 2800; 4A+1CWB+1CNB AP = 9600+900+400; CP 3500), share payload (branding banners injected as data URLs, hero_image, day images, resolved hotel/meal labels, 5 terms blocks, company_whatsapp), POST /api/share/{token}/accept (accepted=true persisted, accepted_at set, linked lead flips to 'won', idempotent, 404 unknown token). Whole suite now 102 passed / 0 failed. Also fixed one STALE assertion in the old suite (balance-split due date now clamped to max(today, start-7d) per the round-2 fix -> EXPECTED CHANGE, assertion updated) and made the 3 real-email tests skip on provider 429 so the suite is deterministic. Costing regression: default adults=pax=2 still yields the old 13912.50 total, so the occupancy model is backward compatible. FRONTEND (Playwright, public preview URL): Settings Route Master add/edit/delete with rich-text description (edit dialog prefills the HTML) PASS; Terms tab shows seeded template; Sector Branding upload of header+footer files -> saved, listed with 2 previews; Company tab seeded 919876543210. Builder: From=IXB/NJP + To=Gangtok auto-populates day-desc-1 with route-master HTML containing 'Teesta valley', editor is typeable and the bold toolbar wraps the selection; adults=3/cwb=1 -> Hotels Rs.6,300, Total Rs.8,269; adults=2/cwb=0 -> Hotels Rs.4,200 / Total Rs.5,513; saving with terms cleared shows the mandatory-terms error toast and stays on the page; terms-template-select populates all 5 rich blocks; save lands on /itineraries with the row present. Guest view: header/footer banners, full-bleed hero with destination title, timeline day with 2 images, rich day HTML, price box Rs.8,269, 5 policy accordions (payment_policy opens), fixed sticky action bar with Accept Quote / Download PDF / wa.me/919876543210, Accept -> toast + accepted-banner + disabled 'Quote Accepted', persists after reload; changing the company WhatsApp in Settings updates the guest wa.me href. Leads: adults/cwb/cnb inputs present, privacy disclaimer present. Vendors: 8-field room matrix with seeded 2800/1200/900/400 and a new hotel with full matrix saved and listed. Auth playbook re-verified: bcrypt hash $2b$12$, httpOnly+secure cookies on login, CORS explicit origins with allow_credentials, lockout at the 5th failure (429), seed_admin re-hashes when ADMIN_PASSWORD changes. All TEST_ data purged afterwards (1 seeded itinerary, 4 leads, 6 hotels, 3 routes, 1 terms template, 0 branding remain).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST/PATCH /api/itineraries",
+        "issue": "The 'Terms section is mandatory' rule is enforced only in the React builder. The API happily creates/updates an itinerary with terms={} or missing, so any non-UI client (or the pytest suite) can persist a proposal with no policies and the guest view then renders no policies-section. Add server-side validation for the 5 terms blocks."
+      },
+      {
+        "endpoint": "DELETE /api/routes/{id}, /api/settings/terms/{id}, /api/settings/branding/{id}",
+        "issue": "All three return 200 {'status':'ok'} for non-existent ids (delete_one result ignored). Should return 404 when deleted_count == 0 so the UI can distinguish a stale row."
+      },
+      {
+        "endpoint": "POST /api/settings/branding",
+        "issue": "No server-side size/mime validation on header_banner/footer_banner base64 data URLs (frontend caps at 2 MB only). A crafted request can store an arbitrarily large blob in Mongo which is then echoed on every public GET /api/share/{token} payload. Validate prefix 'data:image/' and max length."
+      },
+      {
+        "endpoint": "GET /api/share/{token} (branding match)",
+        "issue": "match_branding() is a very loose fuzzy match (substring both ways + split on '/' + split on whitespace). A sector like 'Goa' will also match a destination 'Goa & Gokarna' (fine) but a one-word sector can bleed into unrelated destinations. Prefer an explicit sector field on the itinerary or exact/whitelisted matching."
+      },
+      {
+        "endpoint": "POST /api/email/send",
+        "issue": "Still carried over from round 2: the managed Resend proxy returns 429 'email rate limit exceeded' when the suite runs twice quickly. Handled now by skipping those 3 tests on 429 instead of failing."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "SharedItinerary (guest view) — mobile",
+        "issue": "At 390px the page has a 16px horizontal overflow (document.scrollWidth 406 vs innerWidth 390), so the guest page scrolls sideways and the 48px hero <h1> ('Sikkim/Darjeeling') visually reaches/clips the right edge. Add 'overflow-x-hidden' on the root wrapper and clamp the hero heading (e.g. text-4xl sm:text-6xl + break-words) for long destination names.",
+        "selector": "[data-testid=\"shared-itinerary\"] / [data-testid=\"share-title\"]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Leads dialog — privacy disclaimer",
+        "issue": "Requested exact copy is 'Your data will be used in a professional manner and will not be disclosed to any third party.' but the element renders with a 'Privacy: ' prefix, so an exact-text assertion fails (substring matches). Align the copy if the exact string is a requirement.",
+        "selector": "[data-testid=\"lead-privacy-disclaimer\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Guest share view",
+        "issues": [
+          "Hero image is taken as the first available day image, which is a hotel-room interior photo — an interior shot as the full-bleed destination hero reads oddly. Prefer the route-master image (or a destination image) for the hero and keep hotel photos inside the day grid.",
+          "Mobile 390px: horizontal scroll / hero title clipping (see ui_bugs).",
+          "Sticky action bar, icon collapse (labels hidden under sm), accordions, price card and footer all render correctly; contrast is fine."
+        ]
+      },
+      {
+        "screen": "Global (carried over from iteration_1/2, still open)",
+        "issues": [
+          "Native <input type=\"date\"> is still used (Itinerary Builder start date, lead travel dates) instead of the shadcn Calendar/Popover.",
+          "/invoices still does not auto-select the first invoice on a fresh load (inconsistent with the /bookings fix)."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_round3_features.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_round2_fixes.py",
+    "/app/backend/tests/cleanup_test_data.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Guest view mobile: kill the 16px horizontal overflow and clamp/wrap the hero heading at 390px.",
+    "Enforce the mandatory 5 terms blocks server-side on POST/PATCH /api/itineraries (currently UI-only).",
+    "Sanitize the admin-authored HTML (day descriptions, terms, route descriptions) before rendering it with dangerouslySetInnerHTML on the public share page — stored-XSS vector from any sales/admin user.",
+    "Return 404 from DELETE /api/routes|/settings/terms|/settings/branding when nothing was deleted.",
+    "Validate branding banner data URLs server-side (mime prefix + max size).",
+    "Optional: make the guest hero prefer a route/destination image over the hotel-room photo, and drop the 'Privacy: ' prefix if the exact disclaimer copy is required."
+  ],
+  "critical_code_review_comments": [
+    "SharedItinerary.jsx renders day.description and all 5 terms blocks with dangerouslySetInnerHTML and no sanitizer; RichTextEditor stores raw innerHTML, so any script/onerror payload typed or pasted by an internal user is persisted and executed on the public guest page. Add DOMPurify (or a backend bleach-style allowlist) at write time.",
+    "RichTextEditor relies on the deprecated document.execCommand and re-writes innerHTML on every value change; the auto-loaded route description is inserted at the caret position, which is why typed text can land mid-paragraph. Works today but consider a maintained editor (Tiptap/Lexical) before adding more formatting.",
+    "compute_costing() silently falls back to adults = pax when 'adults' is absent — good for backward compatibility, but a payload with adults=0 is coerced to 1 pair pricing via max(adults,1); reject non-sensical headcounts (adults < 1, cwb/cnb negative) with a 400 instead.",
+    "Branding banners are stored as base64 in Mongo and re-sent on every public share request; two 2 MB banners add ~5.4 MB of base64 to each guest payload. Consider persisting to a file/object store and returning URLs.",
+    "settings_routes.update_route/update_terms do update_one then find_one, so a PATCH against an unknown id returns 404 only after a no-op write — check matched_count first for clearer semantics."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_round3_features.py",
+    "/app/backend/tests/cleanup_test_data.py"
+  ],
+  "success_rate": {"backend": "100% (102/102 pytest cases, 3 email tests skip on provider 429)", "frontend": "95% (all 11 requested round-3 flows pass; 1 mobile overflow bug + 1 copy mismatch)"},
+  "seed_data_creation": "Temporary only: TEST_ routes/terms/branding/hotel/lead/itineraries created and deleted by the tests; the round-3 fixture now also deletes the 'Sikkim/Darjeeling' branding record it creates. Final DB state: 1 seeded itinerary (Sikkim Darjeeling 6N/7D), 4 leads, 6 hotels, 11 vehicles, 3 seeded routes, 1 seeded terms template, 0 branding, 0 bookings/invoices.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Admin thapa.holidays09@gmail.com / Admin@123 (from /app/memory/test_credentials.md); sales/ops/finance demo accounts also verified for role checks",
+  "context_for_next_testing_agent": "Container clock is 2026-08-29, use later travel dates. Login testid is login-submit-button (NOT login-submit-btn). Backend suite: /app/backend/tests/{backend_test.py,test_round2_fixes.py,test_round3_features.py}; the 3 real-email tests now skip on 429. Run /app/backend/tests/cleanup_test_data.py after any suite/UI run to purge TEST_ data (itinerary delete cascades bookings/invoices). Sector branding must exist for the sector to see share-header-banner/share-footer-banner in the guest view — create it via Settings -> Sector Branding or POST /api/settings/branding, and delete it afterwards (it is echoed on every public share payload). Open items for retest: guest-view mobile horizontal overflow, server-side terms validation, HTML sanitization, DELETE 404 semantics, /invoices auto-select and native date pickers.",
+  "rca_of_the_issue": "Only pre-existing suite failure was 8 cascading errors in TestEndToEndFlow: test_create_invoice_splits asserted the hard-coded balance due date '2026-08-03', but the round-2 fix intentionally clamps it to max(today, start_date - 7d) (=2026-08-29 today), and the class-scoped STATE dict then lacked invoice_id/advance so 7 downstream tests KeyError'd. This is an EXPECTED CHANGE; the assertion was updated to compute the clamped date and to assert balance_due >= advance_due. Guest-view mobile overflow RCA: the root wrapper has no overflow-x guard and the hero h1 keeps font-size 48px at 390px with tracking-tight, producing document.scrollWidth 406 > 390."
+}

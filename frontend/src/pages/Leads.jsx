@@ -27,7 +27,7 @@ const STATUS_BADGE = {
   won: "bg-emerald-500/10 text-emerald-600", lost: "bg-red-500/10 text-red-600",
 };
 
-const EMPTY = { customer_name: "", email: "", phone: "", destination: "", travel_start: "", travel_end: "", pax: 2, budget: "", source: "", notes: "" };
+const EMPTY = { customer_name: "", email: "", phone: "", destination: "", travel_start: "", travel_end: "", pax: 2, adults: 2, cwb: 0, cnb: 0, budget: "", source: "", notes: "" };
 
 function LeadDialog({ open, onOpenChange, initial, onSaved }) {
   const [form, setForm] = useState(EMPTY);
@@ -44,7 +44,7 @@ function LeadDialog({ open, onOpenChange, initial, onSaved }) {
     if (!form.customer_name.trim()) return toast.error("Customer name is required");
     setSaving(true);
     try {
-      const payload = { ...form, pax: Number(form.pax) || 2, budget: Number(form.budget) || 0 };
+      const payload = { ...form, pax: Number(form.pax) || 2, adults: Number(form.adults) || 0, cwb: Number(form.cwb) || 0, cnb: Number(form.cnb) || 0, budget: Number(form.budget) || 0 };
       if (isEdit) await api.patch(`/leads/${initial.id}`, payload);
       else await api.post("/leads", payload);
       toast.success(isEdit ? "Lead updated" : "Lead created — welcome email triggered");
@@ -93,6 +93,18 @@ function LeadDialog({ open, onOpenChange, initial, onSaved }) {
             <Input type="number" min="1" value={form.pax} onChange={set("pax")} data-testid="lead-pax-input" />
           </div>
           <div className="space-y-1.5">
+            <Label>Adults</Label>
+            <Input type="number" min="1" value={form.adults} onChange={set("adults")} data-testid="lead-adults-input" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Child with bed (CWB)</Label>
+            <Input type="number" min="0" value={form.cwb} onChange={set("cwb")} data-testid="lead-cwb-input" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Child no bed (CNB)</Label>
+            <Input type="number" min="0" value={form.cnb} onChange={set("cnb")} data-testid="lead-cnb-input" />
+          </div>
+          <div className="space-y-1.5">
             <Label>Budget (₹)</Label>
             <Input type="number" min="0" value={form.budget} onChange={set("budget")} data-testid="lead-budget-input" />
           </div>
@@ -105,6 +117,9 @@ function LeadDialog({ open, onOpenChange, initial, onSaved }) {
             <Textarea value={form.notes} onChange={set("notes")} rows={2} data-testid="lead-notes-input" />
           </div>
         </div>
+        <p className="text-xs text-muted-foreground border-t border-border pt-3" data-testid="lead-privacy-disclaimer">
+          Your data will be used in a professional manner and will not be disclosed to any third party.
+        </p>
         <Button onClick={save} disabled={saving} className="w-full" data-testid="lead-save-btn">
           {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} {isEdit ? "Save changes" : "Create lead"}
         </Button>
