@@ -44,6 +44,10 @@ Production-ready Travel CRM web app with: Omni-Channel Sharing Engine (one-click
 - Guest view v2: day dates + via/excursion map-pin badges, "Your Hotels" stay cards (image, room, meal plan, check-in/out, nights), transparent price-breakdown table (accommodation, extra bed/CWB/CNB lines, transport, activities, services & handling, GST — sums exactly to total), sticky bar with Approve Itinerary / Share to WhatsApp / Download PDF / Chat
 - Costing engine now tracks extra_bed/cwb/cnb cost components
 
+## Implemented (2026-08-29, round 5 — guest view document-style redesign)
+- Guest share view restructured to match the reference quote-PDF flow: branded hero with tagline + trust strip (100% Customisation, 24×7 Assistance, Safety & Security, Value & Transparency) → greeting + trip summary box (destination, dates, duration, group size, meal plan, vehicle) → transparent package pricing → hotel photo cards → document-style DAY 01 cards (chip + date + badges + images + stay line) → side-by-side Included/Excluded cards with check/cross icons → policies accordions → contact footer
+- Fixed: route image scoring shared via find_best_route (via/excursion-aware) so day images + hero prefer the correct route photo; HTML entity decoding in inclusion/exclusion items
+
 ## Backlog
 - P0: (none pending)
 - P1: WhatsApp Business Cloud API interactive messages (needs Meta credentials); true PDF generation via @react-pdf/renderer (currently print-to-PDF); editable email body composer (blocked by managed-email G4 guardrails — currently fixed templates); move branding banners to object storage (currently base64 in Mongo)

@@ -35,12 +35,11 @@ async def list_routes(user: dict = Depends(get_current_user)):
     return await db.routes.find({}, {"_id": 0}).sort("from_place", 1).to_list(500)
 
 
-@routes_router.get("/lookup")
-async def lookup_route(from_place: str = "", to_place: str = "", via: str = "", excursion: str = "", user: dict = Depends(get_current_user)):
-    """Find the best route-master match for a From/To/Via or Base/Excursion combo and auto-generate the day title."""
-    if not from_place or (not to_place and not excursion):
-        raise HTTPException(status_code=400, detail="from_place and to_place or excursion are required")
+async def find_best_route(from_place: str, to_place: str = "", via: str = "", excursion: str = ""):
+    """Best route-master match for a From/To/Via or Base/Excursion combo."""
     f, t, v, e = _norm(from_place), _norm(to_place), _norm(via), _norm(excursion)
+    if not f:
+        return None
     candidates = [r for r in await db.routes.find({}, {"_id": 0}).to_list(500) if _norm(r.get("from_place")) == f]
 
     def score(r):
@@ -56,6 +55,17 @@ async def lookup_route(from_place: str = "", to_place: str = "", via: str = "", 
 
     best = max(candidates, key=score, default=None)
     if best is None or score(best) < 0:
+        return None
+    return best
+
+
+@routes_router.get("/lookup")
+async def lookup_route(from_place: str = "", to_place: str = "", via: str = "", excursion: str = "", user: dict = Depends(get_current_user)):
+    """Find the best route-master match for a From/To/Via or Base/Excursion combo and auto-generate the day title."""
+    if not from_place or (not to_place and not excursion):
+        raise HTTPException(status_code=400, detail="from_place and to_place or excursion are required")
+    best = await find_best_route(from_place, to_place, via, excursion)
+    if best is None:
         return {"found": False, "description": "", "image_url": "", "day_title": auto_title(from_place, to_place, via, excursion)}
     return {
         "found": True,

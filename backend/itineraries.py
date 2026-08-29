@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from auth import get_current_user, require_roles
 from database import db
 from htmlutil import sanitize_html
-from settings_routes import get_company, match_branding
+from settings_routes import find_best_route, get_company, match_branding
 
 router = APIRouter(prefix="/api/itineraries", tags=["itineraries"])
 share_router = APIRouter(prefix="/api/share", tags=["share"])
@@ -247,13 +247,9 @@ async def _resolve_day(day: dict) -> dict:
         "vehicle_label": "",
         "images": [],
     }
-    if day.get("from_place") and day.get("to_place"):
-        route = await db.routes.find_one(
-            {
-                "from_place": {"$regex": f"^{day['from_place']}$", "$options": "i"},
-                "to_place": {"$regex": f"^{day['to_place']}$", "$options": "i"},
-            },
-            {"_id": 0},
+    if day.get("from_place"):
+        route = await find_best_route(
+            day["from_place"], day.get("to_place", ""), day.get("via", ""), day.get("excursion", "")
         )
         if route and route.get("image_url"):
             out["images"].append(route["image_url"])
