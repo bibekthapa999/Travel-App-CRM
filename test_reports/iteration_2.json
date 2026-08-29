@@ -1,0 +1,79 @@
+{
+  "summary": "Round-2 regression of the 9 fixes from iteration_1. Backend: full pytest suite now 73/73 passing (66 pre-existing + 7 new round-2 cases in /app/backend/tests/test_round2_fixes.py). Verified via API: half-up money rounding in WhatsApp/message builders (13912.5 -> Rs.13,913), over-payment guard returns 400 'Amount exceeds outstanding balance of ...', DELETE /api/itineraries/{id} cascades bookings+invoices and returns cascade_deleted (orphans confirmed gone from GET /api/bookings and /api/invoices), brute-force lockout now keyed on X-Forwarded-For (429 on the 5th wrong attempt from one XFF), vendor_request email to seeded delivered+<label>@resend.dev now returns 200. Frontend (Playwright, 1920x1080, public preview URL): /bookings fresh load auto-selects the first booking (booking-detail visible, booking-empty count 0); vendor-share -> Email tab -> Send now shows 'Sending…'/disabled state, a success toast 'Email sent to delivered+veh-himalayan@resend.dev' and closes the modal (previously a fully silent 502); both WhatsApp CTAs are real <a target=_blank> anchors with https://wa.me/... hrefs (lead-whatsapp-btn and share-wa-open-btn); invoices record-payment dialog prefills payment-amount-input with the next unpaid split (9738.75 for Balance 70%) and an over-payment surfaces the backend 400 as a visible toast. All 9 requested items PASS. All TEST_ data was purged afterwards (itineraries/bookings/invoices back to 0, login_attempts cleared, 2 seeded leads intact).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/invoices/{id}/payments",
+        "issue": "The over-payment guard uses `if data.amount > outstanding + 0.01`, so a payment can overshoot the total by up to 1 paisa (reproduced: total 13912.50 -> paid 13912.51, status 'paid'). Cosmetic but it lets stored `paid` exceed `total`; clamp the recorded amount to min(amount, outstanding) instead of the raw epsilon allowance."
+      },
+      {
+        "endpoint": "POST /api/invoices (split due dates)",
+        "issue": "Balance split due_date = booking.start_date - 7 days with no lower bound, so for a near/past departure the balance instalment is due BEFORE the advance and in the past (observed: Advance due 2026-08-29, Balance due 2026-08-03 for a 10-Aug-2026 departure). Clamp with max(today, start_date - 7d)."
+      },
+      {
+        "endpoint": "POST /api/email/send",
+        "issue": "Not a defect, but noted: the managed Resend proxy rate-limits real sends ('429 email rate limit exceeded'). Running the pytest suite twice back-to-back makes the 3 real-send tests fail with 429. Recommend marking those tests as skip/xfail on 429 (or gating them behind an env flag) so the suite stays deterministic."
+      },
+      {
+        "endpoint": "GET /api/health",
+        "issue": "No /api/health endpoint exists (returns 404); only GET /api/ responds. Minor - add a health route for readiness probes."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ShareModal",
+        "issue": "Duplicate data-testid=\"share-email-error\" is rendered twice (preview.error at line 121 and emailErr at line 133). Strict-mode locators resolve to 2 nodes; make them distinct (e.g. share-email-preview-error vs share-email-send-error).",
+        "selector": "[data-testid=\"share-email-error\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "/invoices fresh load",
+        "issue": "Inconsistent with the /bookings fix: Invoices still shows 'Select an invoice to view payment schedule.' on a fresh load / deep link (invoice-detail count 0) and requires a click. Apply the same auto-select-first behaviour.",
+        "affected_selectors": ["[data-testid=\"invoice-detail\"]", "[data-testid=\"invoice-empty\"]", "[data-testid=\"invoice-item-*\"]"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Global (re-checked)",
+        "issues": ["No new contrast/spacing/alignment defects. Still open from iteration_1: native <input type=date> instead of the shadcn Calendar on itin-start-input / lead-start-input / lead-end-input."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_round2_fixes.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "LOW: clamp payment amount to outstanding instead of allowing the +0.01 epsilon overshoot (paid can exceed total by 1 paisa).",
+    "LOW: clamp the Balance split due_date to max(today, start_date - 7d) - it can currently be earlier than the Advance due date / in the past.",
+    "LOW: auto-select the first invoice on /invoices fresh load (mirror the Bookings fix).",
+    "LOW: de-duplicate the two data-testid=\"share-email-error\" nodes in ShareModal.",
+    "LOW: make the 3 real-email pytest cases tolerate/skip the provider 429 rate limit so the suite is repeatable."
+  ],
+  "critical_code_review_comments": [
+    "All 9 iteration_1 fixes are implemented correctly and verified end to end; no regressions found in the 66 pre-existing tests.",
+    "emailer.send_email now maps upstream 4xx to the same status with the provider reason (verified live: a 429 'email rate limit exceeded' propagated as 429 with the reason instead of a blanket 502).",
+    "auth.py rate-limit identifier now takes the leftmost X-Forwarded-For with a request.client.host fallback - lockout reproducibly triggers on the 5th wrong password. The attempt count still does not decay after the 15-minute window (only cleared on successful login) - unchanged from iteration_1, still worth fixing.",
+    "Playbook auth checks all pass: password hashes are $2b$12$, login sets HttpOnly+Secure access_token/refresh_token cookies, app-level CORS is an explicit allowlist (no ACAO for an unknown Origin on localhost:8001) with allow_credentials=true, seed_users is idempotent and re-hashes the admin password when ADMIN_PASSWORD changes. Note: the edge/ingress injects 'access-control-allow-origin: *' on the public URL - infra behaviour, not app code.",
+    "bookings/invoices still snapshot total/cost/profit/start_date from the itinerary with no recompute on itinerary edits (open from iteration_1).",
+    "backend_test.py does not clean up the itineraries/bookings/invoices it creates; each run leaves TEST_ artefacts that inflate dashboard KPIs. Add a class-scoped teardown that DELETEs the created itineraries (cascade now handles the children). I purged them manually this round."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_round2_fixes.py (new - 7 pytest cases for the round-2 API fixes)",
+    "/app/backend/tests/backend_test.py (updated 2 stale assertions: vendor preview recipient is now delivered+hotel-himalayan@resend.dev; total_leads >= 2 instead of >= 3 since the leads class runs on a separate xdist worker and cleans up)"
+  ],
+  "success_rate": {"backend": "100% (73/73 pytest cases)", "frontend": "100% of the 4 requested UI items pass; 2 LOW-priority nits found"},
+  "seed_data_creation": "Created and then fully deleted: TEST_R2 itineraries (Manali, 2026-10-05, total 13912.50) with their cascaded booking + invoice. DB left in the clean seeded state (0 itineraries/bookings/invoices, 2 seeded leads, 3 hotels, 3 vehicles, 4 users) and db.login_attempts cleared.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "/app/memory/test_credentials.md accurate; admin thapa.holidays09@gmail.com/Admin@123 and finance finance@thapaholidays.com/Finance@123 both verified this round.",
+  "context_for_next_testing_agent": "Run `cd /app/backend && python -m pytest tests/ -q --junitxml=/app/test_reports/pytest/pytest_results.xml` (73 tests, all passing). CAVEAT: 3 tests do real email sends through the managed Resend proxy; two runs in quick succession hit '429 email rate limit exceeded' and those 3 fail - wait a few minutes and re-run before reporting them as bugs. UI login: the submit button is [data-testid=\"login-submit-button\"] and a successful login lands on '/' (NOT '/dashboard') - wait ~3-4s after clicking before navigating, otherwise the cookie race sends you back to /login. Toasts are sonner and auto-dismiss in ~4s, so poll for toast text every 250ms right after the action instead of a single check after a long sleep. /bookings auto-selects the first booking; /invoices does NOT. Container clock is 2026-08-29; use later dates. Leads kanban cards are [data-testid=\"kanban-card-<id>\"].",
+  "rca_of_the_issue": "No new critical issues. The only initially-red result this round was 3 email tests failing with 429; RCA: emailer.send_email correctly propagates the upstream provider status, and the managed Resend proxy rate-limits repeated real sends - the earlier run in the same minute had consumed the quota. After a pause the same tests returned 200 and the UI showed the success toast 'Email sent to delivered+veh-himalayan@resend.dev', confirming the iteration_1 silent-failure defect is fixed."
+}

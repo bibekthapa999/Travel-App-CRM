@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 210 40% 98%;
+        --foreground: 222 47% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+        --primary: 199 89% 40%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 47% 11%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 25 95% 53%;
+        --accent-foreground: 0 0% 100%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 199 89% 40%;
+        --chart-1: 199 89% 48%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 25 95% 53%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 340 75% 55%;
+        --radius: 0.5rem;
+    }
+    .dark {
+        --background: 224 71% 4%;
+        --foreground: 210 40% 98%;
+        --card: 222 47% 11%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222 47% 11%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 199 93% 60%;
+        --primary-foreground: 224 71% 4%;
+        --secondary: 217 33% 17%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 27 96% 61%;
+        --accent-foreground: 224 71% 4%;
+        --destructive: 0 63% 31%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 217 33% 17%;
+        --input: 217 33% 17%;
+        --ring: 199 93% 60%;
+        --chart-1: 199 93% 60%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 27 96% 61%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 340 75% 55%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    h1, h2, h3, h4, .font-heading {
+        font-family: 'Outfit', sans-serif;
+    }
+    code, .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+    }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
+        padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
+        column-gap: inherit; row-gap: inherit; gap: inherit;
+        border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
+        border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
+        border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
+    }
+}
+
+.noise-bg {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.kanban-scroll::-webkit-scrollbar { height: 8px; }
+.kanban-scroll::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: #fff !important; }
+}

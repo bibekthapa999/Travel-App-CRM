@@ -1,0 +1,140 @@
+{
+  "theme": "Light/Dark Mode Toggle (Default: Light)",
+  "typography": {
+    "fonts": {
+      "headings": "Outfit",
+      "body": "Inter",
+      "mono": "JetBrains Mono"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "label": "text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground"
+    },
+    "instructions": "DO NOT use Inter or standard sans-serif for headings. Always apply tracking-tight to headings and uppercase tracking-widest for labels. Maintain high contrast."
+  },
+  "colors": {
+    "archetype": "Swiss & High-Contrast (Data-heavy CRM)",
+    "light": {
+      "background": "#F8FAFC",
+      "foreground": "#0F172A",
+      "surface": "#FFFFFF",
+      "primary": "#0284C7",
+      "primary_foreground": "#FFFFFF",
+      "accent": "#F97316",
+      "muted": "#F1F5F9",
+      "muted_foreground": "#64748B",
+      "border": "#E2E8F0"
+    },
+    "dark": {
+      "background": "#020617",
+      "foreground": "#F8FAFC",
+      "surface": "#0F172A",
+      "primary": "#38BDF8",
+      "primary_foreground": "#020617",
+      "accent": "#FB923C",
+      "muted": "#1E293B",
+      "muted_foreground": "#94A3B8",
+      "border": "#1E293B"
+    },
+    "semantic": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "danger": "#EF4444",
+      "info": "#3B82F6"
+    },
+    "instructions": "Never use pure black or pure white. Tint neutrals slightly towards cool slate (blue-ish). Limit primary color to CTAs and active states. Use semantic colors strictly for status badges (Pending/Confirmed/Rejected) and profit margins."
+  },
+  "layouts": {
+    "app_shell": "Collapsible sidebar navigation on the left (`w-16` collapsed, `w-64` expanded). Main content area takes remaining space. Fixed top header with breadcrumbs, search, and user profile.",
+    "dashboard_grid": "High Density Grid: Base `grid-cols-1 md:grid-cols-3 lg:grid-cols-4` with tight `gap-4` or `gap-6`. Summary metrics span 1 column, primary charts span 2-3 columns.",
+    "kanban_board": "Horizontal scrollable container with vertical lanes. Lanes have solid subtle backgrounds (`bg-muted/50`). Drag-and-drop cards must have `hover:-translate-y-1` and drop-shadow lift.",
+    "spacing_philosophy": "Generous outer padding (`p-6` to `p-8` for sections). Dense inner padding for tables and list items (`p-2` to `p-4`) to fit CRM data.",
+    "instructions": "Always optical align elements. Use Subgrid where nested alignment is needed. Ensure sidebar leaves main content scrollable independently. NO centered alignment on text blocks."
+  },
+  "components": {
+    "surfaces": "Neumorphic 'Clay & Crisp' variant for dashboard widgets: flat background, sharp 1px border (`border-border`), soft hover shadow. Do NOT use soft UI everywhere.",
+    "buttons": "Pill-shaped or sharp rounded corners (e.g., `rounded-md`). Primary buttons have strong background color with white text. Hover state must slightly increase brightness.",
+    "cards": "Subtle roundness (`rounded-lg`), 1px border. No shadows on rest state. Hover: slight shadow-lg.",
+    "inputs_forms": "Use Shadcn customized components. Light mode inputs have `bg-white` and subtle border. Focus states MUST use `ring-2 ring-primary/50`.",
+    "modals_sheets": "Use Glassmorphism (Crystal variant) for overlays (`backdrop-blur-xl bg-black/60`). The modal itself should be solid background with crisp borders.",
+    "status_badges": "Pill shaped (`rounded-full`), dense padding (`px-2.5 py-0.5`), bold small text. Background should be 10-20% opacity of the semantic color with text using 100% of the semantic color."
+  },
+  "visual_enhancers": {
+    "icons": "Use `lucide-react` for system icons. For dashboard density, keep icon sizes consistent (`w-4 h-4` to `w-5 h-5`).",
+    "motion": "Micro-interactions are mandatory. `transition-transform hover:-translate-y-0.5` for cards. Staggered fade-in (`framer-motion`) for list items. No 'transition: all'.",
+    "textures": "Add subtle SVG noise or grain background to the login page and public itinerary pages to prevent flatness."
+  },
+  "modules": {
+    "omni_channel_sharing": {
+      "instructions": "Design a clean modal with tabs (WhatsApp, Email, Copy Link). Include pre-formatted text preview areas.",
+      "components": ["Tabs", "Textarea", "Button", "Dialog"]
+    },
+    "leads_kanban": {
+      "instructions": "Drag-and-drop columns (New, Contacted, Proposal Sent, Negotiation, Won, Lost). Cards should display lead name, destination, and budget clearly.",
+      "components": ["Card", "Badge", "ScrollArea"]
+    },
+    "vendor_inventory": {
+      "instructions": "Data-dense tables for Hotels and Vehicles. Include sticky headers, inline editing (or click-to-edit modal), and status toggles.",
+      "components": ["Table", "Input", "Select", "Switch"]
+    },
+    "itinerary_builder": {
+      "instructions": "Vertical timeline layout for day-by-day plan. Live cost calculator fixed on the right side or bottom sticky bar.",
+      "components": ["Accordion", "Slider", "Checkbox", "Card"]
+    },
+    "bookings_invoices": {
+      "instructions": "Split view: list on left, details on right. Use progress bars for payment tracking (Advance/Balance).",
+      "components": ["Progress", "Table", "Sheet"]
+    }
+  },
+  "image_urls": [
+    {
+      "category": "public_itinerary_hero",
+      "url": "https://images.unsplash.com/photo-1773393776477-61773dfc8a09?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHw0fHx0cmF2ZWwlMjBkZXN0aW5hdGlvbiUyMGx1eHVyeSUyMGhvdGVsJTIwc3Vuc2V0fGVufDB8fHx8MTc4Nzk5MTI2MHww&ixlib=rb-4.1.0&q=85",
+      "description": "Modern luxury hotel at sunset. Use for header image in the public shareable itinerary page."
+    },
+    {
+      "category": "public_itinerary_destination",
+      "url": "https://images.unsplash.com/photo-1596003903067-bf5762ad5c19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwzfHxiZWF1dGlmdWwlMjBsYW5kc2NhcGUlMjBtb3VudGFpbiUyMGxha2V8ZW58MHx8fHwxNzg3OTkxMjYwfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Beautiful mountain landscape. Use as an itinerary destination placeholder."
+    },
+    {
+      "category": "user_avatar_female",
+      "url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4Nzk5MTI2MHww&ixlib=rb-4.1.0&q=85",
+      "description": "Professional headshot (female) for agent/admin avatars."
+    },
+    {
+      "category": "user_avatar_male",
+      "url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4Nzk5MTI2MHww&ixlib=rb-4.1.0&q=85",
+      "description": "Professional headshot (male) for agent/admin avatars."
+    }
+  ],
+  "accessibility": {
+    "contrast": "Ensure text has 4.5:1 ratio against backgrounds. Use text-shadow over images.",
+    "focus": "All interactive elements MUST have visible focus rings (`focus-visible:ring-2`).",
+    "motion": "Respect `prefers-reduced-motion`."
+  },
+  "testing": {
+    "instructions": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid=\"login-submit-button\"`, `data-testid=\"kanban-card-1\"`)."
+  },
+  "instructions_to_main_agent": [
+    "Prioritize Shadcn components in `src/components/ui/` heavily.",
+    "Use `.js` and `.jsx` extensions, NOT `.tsx`.",
+    "Do NOT use HTML-based defaults for Datepickers, Selects, or Dialogs. Use Shadcn equivalents.",
+    "Do NOT use `transparent` backgrounds for sticky headers or dropdown menus.",
+    "For toasts, use `sonner`.",
+    "Always apply hover, focus, and active states. Use `hover:text-white` when changing background to dark.",
+    "Do NOT center align dashboard layouts. Everything should be left-aligned naturally.",
+    "Inject the provided image URLs natively. NEVER use placeholder services like via.placeholder.com."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid generic, 'on-distribution' AI slop outputs. Create distinctive frontends.",
+    "Do NOT apply universal transition (e.g., `transition: all`). Target specific properties.",
+    "Do NOT center align the app container (`.App { text-align: center; }`).",
+    "Never use AI emoji characters (🤖🧠💡) for icons. Use the approved icon library.",
+    "Create depth through layered design elements with z-index hierarchy."
+  ]
+}

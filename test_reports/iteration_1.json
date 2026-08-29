@@ -1,0 +1,130 @@
+{
+  "summary": "First full test round of the Thapa Holidays Travel CRM (React + FastAPI + MongoDB). Built a 66-test pytest regression suite (/app/backend/tests/) covering health, auth/JWT-cookies/RBAC/brute-force, vendor masters CRUD, leads CRUD + kanban statuses, itinerary costing math (meal plans, seasonal surcharge, GST toggle, discount), public share endpoint, bookings + vendor confirmations, invoices + 30/70 splits + payments, managed-Resend email templates (real sends), and dashboard aggregation. Result: 65/66 passing (98.5%). Then ran 6 Playwright UI suites end-to-end on the public preview URL: login/wrong-password/logout, RBAC as finance, dashboard KPIs, Leads kanban (create -> status change -> reload persistence -> search), Vendors (hotel + vehicle create), Itinerary Builder live calculator (verified exact 4200+4400+2000 -> base 10600 -> total Rs.13,912.50 = UI Rs.13,913), ShareModal (WhatsApp/Link/Email tabs), public /share/<token> page desktop+mobile, Bookings + vendor confirmation tracker, Invoices + split payment + receipt email, dark mode and Team page. Core product works. One HIGH-priority defect: email send failures are completely silent in the UI. All TEST_ data was purged; DB left in clean seeded state.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/email/send (template=vendor_request)",
+        "issue": "Always fails with 502 for seeded vendors. Managed Resend rejects the seeded vendor addresses (reservations@himalayanview.in, book@himalayanwheels.in, etc.) with 422 'Undeliverable recipient'. emailer.send_email maps this to a generic 502 'Failed to send email', so the real reason is lost. Fix: seed vendor/hotel emails with deliverable test addresses (delivered+vendor@resend.dev or <name>@example.com) AND map upstream 4xx to 400/422 with the upstream message so the UI can show why.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/auth/login (brute-force lockout)",
+        "issue": "Lockout key uses request.client.host, which behind the k8s/CF ingress is a rotating proxy IP. Observed 7 consecutive wrong passwords with zero 429s (attempts split across 10.79.139.10 and 10.79.139.11 in db.login_attempts). Lockout only triggered after ~15 attempts. Use X-Forwarded-For (leftmost) or key purely on email. Also 'count' never decays after the 15-min window - the doc keeps count>=5 forever and only clears on a successful login."
+      },
+      {
+        "endpoint": "DELETE /api/itineraries/{id}",
+        "issue": "No cascade and no DELETE endpoint for bookings/invoices. Deleting an itinerary leaves orphan bookings + invoices that keep inflating dashboard revenue/profit/pending-vendor counts with no way to clean them up from the app. Reproduced during testing (had to purge via mongosh)."
+      },
+      {
+        "endpoint": "GET /api/itineraries/{id}/message, /api/invoices/{id}/message",
+        "issue": "Customer-facing WhatsApp/email text formats money with ':,.0f' which floors (13912.5 -> 'Rs.13,912') while the whole UI and the public share page round (Rs.13,913). Customer sees two different prices. Use a single rounding helper."
+      },
+      {
+        "endpoint": "PATCH /api/itineraries/{id} vs bookings",
+        "issue": "Booking snapshots total/cost/profit/start_date at creation; editing the itinerary afterwards silently desyncs the booking and its invoice. No recompute or warning."
+      },
+      {
+        "endpoint": "seed_inventory (server.py)",
+        "issue": "Seeded lead travel dates (2026-07-10, 2026-08-01) and the demo data are already in the past relative to the container clock (2026-08-29), so the dashboard 'Upcoming Departures' is empty on a fresh install. Seed relative to today."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ShareModal - Email tab",
+        "issue": "SILENT FAILURE: when POST /api/email/send returns 502 the UI shows nothing at all - no error toast, no [data-testid=share-email-error], button stays 'Send email', modal stays open. Verified by polling the DOM for 12s after a confirmed 502 (vendor_request to Hotel Himalayan View). User cannot tell whether the email went out. Must render share-email-error / an error toast on failure and show a sending/disabled state.",
+        "selector": "[data-testid=\"share-email-send-btn\"], [data-testid=\"share-email-error\"]",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Leads detail - WhatsApp button",
+        "issue": "lead-whatsapp-btn is a <button> using window.open(...) so it has no href attribute (getAttribute('href') === null). Same for ShareModal share-wa-open-btn. Users cannot copy/open-in-new-tab, and popup blockers will kill it silently. Render an <a href='https://wa.me/...' target='_blank' rel='noopener'> styled as a button.",
+        "selector": "[data-testid=\"lead-whatsapp-btn\"], [data-testid=\"share-wa-open-btn\"]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Invoices - payment dialog",
+        "issue": "payment-amount-input is empty on open. It should prefill the next unpaid split amount (e.g. 4173.75 for Advance 30%) so finance does not have to compute it. Recording an arbitrary/over-payment is also accepted with no 'exceeds outstanding' guard.",
+        "selector": "[data-testid=\"payment-amount-input\"]",
+        "priority": "LOW"
+      },
+      {
+        "component": "Vendors dialogs",
+        "issue": "Missing data-testid on hotel CP/MAP/AP rate inputs and on vehicle route-from/route-to/driver-charge/phone/email inputs - untestable and easy to mis-target. FIXED by testing agent (added hotel-room-cp/map/ap-{i}, vehicle-route-from-input, vehicle-route-to-input, vehicle-driver-charge-input, vehicle-phone-input, vehicle-email-input).",
+        "selector": "[data-testid=\"hotel-dialog\"], [data-testid=\"vehicle-dialog\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Bookings -> Send vendor request -> Email",
+        "issue": "End-to-end broken for all seeded vendors: preview loads correctly but send returns 502 and the UI gives zero feedback. Backend seed data + frontend error handling both need fixing.",
+        "affected_selectors": ["[data-testid=\"vendor-share-*\"]", "[data-testid=\"share-email-send-btn\"]"]
+      },
+      {
+        "flow": "Bookings page direct navigation / reload",
+        "issue": "On a fresh load of /bookings no booking is auto-selected - the right pane shows 'Select a booking to manage vendor confirmations.' It only auto-selects right after creating a booking. Inconsistent; auto-select the first booking (or persist selection in the URL) so vendor confirmations are reachable on refresh/deep-link.",
+        "affected_selectors": ["[data-testid=\"booking-detail\"]", "[data-testid=\"booking-item-*\"]"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Itinerary Builder + Lead dialog (date fields)",
+        "issues": [
+          "Uses the raw browser-native <input type=\"date\"> picker (itin-start-input, lead-start-input, lead-end-input) instead of the shadcn Calendar/Popover component used everywhere else - inconsistent look, and the native widget renders differently per browser/OS."
+        ]
+      },
+      {
+        "screen": "Itineraries table / Bookings list",
+        "issues": [
+          "Tables are rendered without a <tbody>, so tbody-scoped selectors return 0 rows. Cosmetic/semantic + testability nit."
+        ]
+      },
+      {
+        "screen": "Global (verified OK)",
+        "issues": [
+          "No contrast/spacing/alignment defects found. Light and dark themes both readable, sidebar/nav/footer spacing consistent, share page hero image is on-theme (Himalayan valley) and mobile 390px layout is clean."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "HIGH: ShareModal must surface email send failures (render share-email-error + error toast, disable button while sending). Currently a 502 is completely invisible to the user.",
+    "HIGH: Reseed hotel/vehicle vendor emails with deliverable addresses (delivered+vendor@resend.dev or <name>@example.com) so vendor_request emails work, and map upstream Resend 4xx to 400/422 with the upstream message instead of a blanket 502.",
+    "MEDIUM: Key the login brute-force lockout on X-Forwarded-For (or email only) - proxy IP rotation currently defeats it (7 wrong passwords, no 429). Also decay/reset the attempt count after the window expires.",
+    "MEDIUM: Render WhatsApp CTAs as real <a href='https://wa.me/...'> anchors instead of window.open buttons.",
+    "MEDIUM: Add cascade/cleanup for bookings+invoices when an itinerary is deleted (or block the delete) - orphans inflate dashboard revenue/profit permanently.",
+    "LOW: Unify money rounding between backend message builders (':,.0f' floors 13912.5 -> 13,912) and the UI (13,913).",
+    "LOW: Auto-select the first booking on /bookings fresh load; prefill payment-amount-input with the next unpaid split; replace native date inputs with the shadcn Calendar."
+  ],
+  "critical_code_review_comments": [
+    "emailer.send_email swallows the upstream Resend error body into a generic 502 - callers and the UI lose the actionable reason ('Undeliverable recipient'). Re-raise as HTTPException(422/400, detail=<upstream message>).",
+    "auth.login uses request.client.host for the rate-limit identifier; behind an ingress this is the proxy IP and is both spoof-adjacent and non-deterministic. Confirmed two distinct identifiers for one client in db.login_attempts.",
+    "bookings.create_booking / invoices.create_invoice copy total/cost/profit/start_date from the itinerary with no back-reference recompute; itinerary edits silently desync downstream financials.",
+    "No DELETE route for /api/bookings or /api/invoices, and DELETE /api/itineraries does not cascade - the dashboard can be permanently skewed with no in-app remedy.",
+    "invoices.record_payment does not validate amount against outstanding, so paid can exceed total (status still flips to 'paid'); _refresh_splits also greedily marks splits paid in list order without tracking which split a payment targets.",
+    "leads.create_lead fires the welcome email via asyncio.create_task with only a logger.warning on failure - the API returns 200 even when the email never sends, so the 'Lead created - welcome email triggered' toast can be a lie.",
+    "server.py mixes app wiring with ~80 lines of seed data; move seed_users/seed_inventory into a seeds.py module. Also @app.on_event('startup'/'shutdown') is deprecated in modern FastAPI - migrate to the lifespan context manager.",
+    "Positive: all Mongo reads correctly project {'_id': 0} and password_hash is never leaked; bcrypt hashes are $2b$; cookies are HttpOnly+Secure+SameSite=None; CORS_ORIGINS is an explicit allowlist; costing math is exact and fully verified."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (new - 66 pytest cases)",
+    "/app/backend/tests/conftest.py (new - role-based authenticated session fixtures)",
+    "/app/frontend/src/pages/Vendors.jsx (added missing data-testid on hotel room rate inputs and vehicle route/driver/phone/email inputs)"
+  ],
+  "success_rate": {"backend": "98.5% (65/66 pytest cases)", "frontend": "93% (all flows pass; 1 HIGH silent-error bug + 1 auto-select nit)"},
+  "seed_data_creation": "All test artefacts were created through the public API/UI with a TEST_ prefix (TEST_Hotel Alpha, TEST_UI Hotel Shimla, TEST_UI Cabs, TEST_Lead QA, TEST_UI Lead, TEST_Manali Escape, TEST_UI Manali Trip, BK-0001/BK-0002, INV-0001) and then fully purged. DB is back to the clean seeded state: 4 users, 3 hotels, 3 vehicles, 2 leads (Aarav Mehta/new, Sneha Kulkarni/contacted), 0 itineraries/bookings/invoices, counters and login_attempts cleared. No seeded/production data was modified.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "/app/memory/test_credentials.md is present and all 4 accounts verified working: admin thapa.holidays09@gmail.com/Admin@123, sales priya@thapaholidays.com/Agent@123, operations ops@thapaholidays.com/Ops@12345, finance finance@thapaholidays.com/Finance@123.",
+  "context_for_next_testing_agent": "Regression suite lives at /app/backend/tests/ - run with `cd /app/backend && python -m pytest tests/ -q --junitxml=/app/test_reports/pytest/pytest_results.xml`. IMPORTANT: pytest.ini forces `-n 2 --dist loadscope`, so any test sharing the module-level STATE dict MUST live in the same class - that is why itineraries/bookings/invoices/email/dashboard are all inside TestEndToEndFlow. The only expected failure is TestEndToEndFlow::test_send_vendor_request (502, seeded vendor email undeliverable) - it should pass once the seed emails are fixed. Note the container clock is 2026-08-29, so any 'future' date in a test must be later than that (the review request's 2026-08-10 is in the past and will not appear in dashboard upcoming_departures). Costing is verified exact: Hotel Himalayan View Deluxe MAP 4200 + Himalayan Wheels 3800+600 + activity 2000 = base 10600, x1.25 margin x1.05 GST = 13912.50. Clipboard copy on the share Link tab needs page.context.grant_permissions(['clipboard-read','clipboard-write']) or it toasts 'Copy failed' (environment, not an app bug). share-email-to is a <span>, not an input - use text_content(). Do NOT retest auth/RBAC/leads/vendors/costing/share-page unless code changed; focus the next round on the email error-handling fix and the vendor seed emails.",
+  "rca_of_the_issue": "Silent email failure: ShareModal calls POST /api/email/send but its catch branch does not set the error state that renders [data-testid=share-email-error], and no toast.error is raised, so a 502 is indistinguishable from success. Root 502: emailer.send_email posts to the Emergent managed Resend proxy, which returns HTTP 422 {'code':'undeliverable_recipient'} for the seeded fake vendor domains (reservations@himalayanview.in). send_email catches httpx.HTTPStatusError and re-raises a hardcoded HTTPException(502,'Failed to send email'), discarding the actionable upstream message. Reproduce: login as admin -> /bookings -> select a booking -> 'Send request' on Hotel Himalayan View -> Email tab -> Send email; network shows 502 on /api/email/send while the UI shows nothing. Mitigation: seed vendors with delivered+<label>@resend.dev / <name>@example.com, propagate the upstream status+message, and add explicit error/loading UI in ShareModal. Brute-force RCA: db.login_attempts contained two docs for one client ('10.79.139.10:<email>' count 2 and '10.79.139.11:<email>' count 5) proving request.client.host is the rotating ingress pod IP, so the per-identifier threshold of 5 is effectively multiplied by the number of proxy IPs."
+}
